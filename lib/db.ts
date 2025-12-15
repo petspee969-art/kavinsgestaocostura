@@ -1,134 +1,71 @@
 /**
- * LOCAL DATABASE ADAPTER
+ * API DATABASE ADAPTER
  * 
- * This file replaces the Supabase client. 
- * Currently, it persists data to localStorage.
- * 
- * TO MIGRATE TO MARIADB (VPS):
- * 1. Create a backend API (Node.js/Express/Python) that connects to your MariaDB.
- * 2. Replace the localStorage calls below with `fetch('http://your-vps-ip/api/...')`.
+ * Connects to the local Node.js/Express API (server.js).
+ * The API in turn connects to MariaDB.
  */
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
-// Helper to simulate async delay (like a real DB)
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Generic Helper for LocalStorage CRUD
-const Storage = {
-    get: <T>(key: string): T[] => {
-        const data = localStorage.getItem(key);
-        return data ? JSON.parse(data) : [];
+// Generic Helper for API Calls
+const API = {
+    get: async <T>(endpoint: string): Promise<T[]> => {
+        const response = await fetch(`/api/${endpoint}`);
+        if (!response.ok) throw new Error(`Failed to fetch ${endpoint}`);
+        return await response.json();
     },
-    set: <T>(key: string, data: T[]) => {
-        localStorage.setItem(key, JSON.stringify(data));
+    post: async <T>(endpoint: string, data: T) => {
+        const response = await fetch(`/api/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`Failed to create ${endpoint}`);
+        return await response.json();
     },
-    add: <T extends { id: string }>(key: string, item: T) => {
-        const items = Storage.get<T>(key);
-        // Ensure ID
-        if (!item.id) item.id = Math.random().toString(36).substr(2, 9);
-        items.unshift(item); // Add to top
-        Storage.set(key, items);
-        return item;
+    put: async <T>(endpoint: string, id: string, data: T) => {
+        const response = await fetch(`/api/${endpoint}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!response.ok) throw new Error(`Failed to update ${endpoint}`);
+        return await response.json();
     },
-    update: <T extends { id: string }>(key: string, item: T) => {
-        const items = Storage.get<T>(key);
-        const index = items.findIndex(i => i.id === item.id);
-        if (index > -1) {
-            items[index] = { ...items[index], ...item };
-            Storage.set(key, items);
-            return items[index];
-        }
-        return null;
-    },
-    delete: <T extends { id: string }>(key: string, id: string) => {
-        const items = Storage.get<T>(key);
-        const filtered = items.filter(i => i.id !== id);
-        Storage.set(key, filtered);
+    delete: async (endpoint: string, id: string) => {
+        const response = await fetch(`/api/${endpoint}/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error(`Failed to delete ${endpoint}`);
+        return await response.json();
     }
-};
-
-// Keys
-const KEYS = {
-    ORDERS: 'kavins_orders',
-    PRODUCTS: 'kavins_products',
-    SEAMSTRESSES: 'kavins_seamstresses',
-    FABRICS: 'kavins_fabrics'
 };
 
 // --- EXPORTED DB API ---
 
 export const db = {
     orders: {
-        getAll: async () => {
-            await delay(100);
-            return Storage.get<ProductionOrder>(KEYS.ORDERS);
-        },
-        create: async (order: ProductionOrder) => {
-            await delay(200);
-            return Storage.add(KEYS.ORDERS, order);
-        },
-        update: async (order: ProductionOrder) => {
-            await delay(200);
-            return Storage.update(KEYS.ORDERS, order);
-        },
-        delete: async (id: string) => {
-            await delay(100);
-            Storage.delete(KEYS.ORDERS, id);
-        }
+        getAll: () => API.get<ProductionOrder>('orders'),
+        create: (order: ProductionOrder) => API.post('orders', order),
+        update: (order: ProductionOrder) => API.put('orders', order.id, order),
+        delete: (id: string) => API.delete('orders', id)
     },
     products: {
-        getAll: async () => {
-            await delay(100);
-            return Storage.get<ProductReference>(KEYS.PRODUCTS);
-        },
-        create: async (product: ProductReference) => {
-            await delay(200);
-            return Storage.add(KEYS.PRODUCTS, product);
-        },
-        update: async (product: ProductReference) => {
-            await delay(200);
-            return Storage.update(KEYS.PRODUCTS, product);
-        },
-        delete: async (id: string) => {
-            await delay(100);
-            Storage.delete(KEYS.PRODUCTS, id);
-        }
+        getAll: () => API.get<ProductReference>('products'),
+        create: (product: ProductReference) => API.post('products', product),
+        update: (product: ProductReference) => API.put('products', product.id, product),
+        delete: (id: string) => API.delete('products', id)
     },
     seamstresses: {
-        getAll: async () => {
-            await delay(100);
-            return Storage.get<Seamstress>(KEYS.SEAMSTRESSES);
-        },
-        create: async (seamstress: Seamstress) => {
-            await delay(200);
-            return Storage.add(KEYS.SEAMSTRESSES, seamstress);
-        },
-        update: async (seamstress: Seamstress) => {
-            await delay(200);
-            return Storage.update(KEYS.SEAMSTRESSES, seamstress);
-        },
-        delete: async (id: string) => {
-            await delay(100);
-            Storage.delete(KEYS.SEAMSTRESSES, id);
-        }
+        getAll: () => API.get<Seamstress>('seamstresses'),
+        create: (seamstress: Seamstress) => API.post('seamstresses', seamstress),
+        update: (seamstress: Seamstress) => API.put('seamstresses', seamstress.id, seamstress),
+        delete: (id: string) => API.delete('seamstresses', id)
     },
     fabrics: {
-        getAll: async () => {
-            await delay(100);
-            return Storage.get<Fabric>(KEYS.FABRICS);
-        },
-        create: async (fabric: Fabric) => {
-            await delay(200);
-            return Storage.add(KEYS.FABRICS, fabric);
-        },
-        update: async (fabric: Fabric) => {
-            await delay(200);
-            return Storage.update(KEYS.FABRICS, fabric);
-        },
-        delete: async (id: string) => {
-            await delay(100);
-            Storage.delete(KEYS.FABRICS, id);
-        }
+        getAll: () => API.get<Fabric>('fabrics'),
+        create: (fabric: Fabric) => API.post('fabrics', fabric),
+        update: (fabric: Fabric) => API.put('fabrics', fabric.id, fabric),
+        delete: (id: string) => API.delete('fabrics', id)
     }
 };
