@@ -7,11 +7,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    // Define o caminho base para produção
+    base: '/corte/',
     server: {
       // Configuração de Proxy para Desenvolvimento
-      // Redireciona chamadas /api para o backend Node.js rodando na porta 3000
       proxy: {
-        '/api': {
+        // Agora as chamadas também incluirão /corte/api
+        '/corte/api': {
           target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,

@@ -3,19 +3,23 @@
  * 
  * Connects to the local Node.js/Express API (server.js).
  * The API in turn connects to MariaDB.
+ * Updated to work under the /corte path.
  */
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
+// Base URL for the API, respecting the deployment path
+const API_BASE = '/corte/api';
+
 // Generic Helper for API Calls
 const API = {
     get: async <T>(endpoint: string): Promise<T[]> => {
-        const response = await fetch(`/api/${endpoint}`);
+        const response = await fetch(`${API_BASE}/${endpoint}`);
         if (!response.ok) throw new Error(`Failed to fetch ${endpoint}`);
         return await response.json();
     },
     post: async <T>(endpoint: string, data: T) => {
-        const response = await fetch(`/api/${endpoint}`, {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -24,7 +28,7 @@ const API = {
         return await response.json();
     },
     put: async <T>(endpoint: string, id: string, data: T) => {
-        const response = await fetch(`/api/${endpoint}/${id}`, {
+        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -33,7 +37,7 @@ const API = {
         return await response.json();
     },
     delete: async (endpoint: string, id: string) => {
-        const response = await fetch(`/api/${endpoint}/${id}`, {
+        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
             method: 'DELETE'
         });
         if (!response.ok) throw new Error(`Failed to delete ${endpoint}`);
