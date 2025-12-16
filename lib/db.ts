@@ -2,14 +2,13 @@
  * API DATABASE ADAPTER
  * 
  * Connects to the local Node.js/Express API (server.js).
- * The API in turn connects to MariaDB.
- * Updated to work under the /corte path.
+ * The API in turn connects to MariaDB/MySQL.
  */
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
-// Base URL for the API, respecting the deployment path
-const API_BASE = '/corte/api';
+// Base URL for the API (Relative to domain root)
+const API_BASE = '/api';
 
 // Generic Helper for API Calls
 const API = {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, AlertCircle, Calendar, Hash, Check } from 'lucide-react';
+import { X, Save, Plus, Trash2, AlertCircle, Calendar, Hash, Check, Palette } from 'lucide-react';
 import { ProductReference, GridType, ProductionOrder, OrderStatus, ProductionOrderItem, ProductColor } from '../types';
 
 interface OrderModalProps {
@@ -75,6 +75,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
     if (selectedRef && !orderToEdit) {
       setGridType(selectedRef.defaultGrid);
       updateSizesFromGrid(selectedRef.defaultGrid);
+      // We set the default fabric, but allow user to change it
       setFabric(selectedRef.defaultFabric || '');
       setItems([{ color: '', colorHex: '', rollsUsed: 0, piecesPerSize: 0 }]);
     }
@@ -191,7 +192,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
       referenceId: selectedRef.id,
       referenceCode: selectedRef.code,
       description: selectedRef.description,
-      fabric: fabric,
+      fabric: fabric, // User edited fabric
       items: productionItems,
       // Preserve state if editing
       activeCuttingItems: orderToEdit ? orderToEdit.activeCuttingItems : [],
@@ -273,15 +274,18 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Tecido Principal</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1 flex justify-between">
+                Tecido Principal 
+                <span className="text-xs font-normal text-slate-400">Editável</span>
+              </label>
               <input
                 required
                 type="text"
                 placeholder="Ex: Viscose"
-                className={`w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none ${selectedRef ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-slate-50'}`}
+                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 value={fabric}
                 onChange={e => setFabric(e.target.value)}
-                disabled={!!selectedRef} // Disable if reference is selected
+                // Removed disabled prop here to allow edits
               />
             </div>
           </div>
@@ -347,59 +351,69 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-bold text-slate-700">Detalhes do Corte (Cores e Rolos)</h3>
-              <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
-                <AlertCircle size={12} />
-                Selecione as cores cadastradas para este produto.
+              <div className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                Digite a cor manualmente ou selecione abaixo.
               </div>
             </div>
 
             <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={index} className="flex gap-3 items-start p-4 bg-slate-50 rounded-xl border border-slate-200 relative group">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-500 mb-2">Cor do Corte</label>
-                    
-                    {selectedRef ? (
-                        <div className="flex flex-wrap gap-2">
-                            {selectedRef.defaultColors.map((colorObj, cIdx) => (
+                <div key={index} className="flex flex-col gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200 relative group">
+                  
+                  {/* Row 1: Color Input and Presets */}
+                  <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                      <div className="flex-1 w-full">
+                        <label className="block text-xs font-medium text-slate-500 mb-1 flex items-center gap-1">
+                            <Palette size={12}/> Cor do Corte
+                        </label>
+                        <div className="flex gap-2">
+                             <input 
+                                type="text"
+                                className="flex-1 px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                                placeholder="Digite a cor..."
+                                value={item.color}
+                                onChange={e => updateItem(index, 'color', e.target.value)}
+                             />
+                             <input 
+                                type="color" 
+                                className="w-10 h-10 p-0 border-0 rounded cursor-pointer"
+                                value={item.colorHex || '#000000'}
+                                onChange={e => updateItem(index, 'colorHex', e.target.value)}
+                             />
+                        </div>
+                      </div>
+
+                      {/* Presets - Quick Select */}
+                      {selectedRef && selectedRef.defaultColors.length > 0 && (
+                          <div className="flex flex-wrap gap-2 md:max-w-[50%]">
+                             {selectedRef.defaultColors.map((colorObj, cIdx) => (
                                 <button
                                     key={cIdx}
                                     type="button"
                                     onClick={() => selectColorForItem(index, colorObj)}
-                                    className={`px-3 py-2 rounded-lg border flex items-center gap-2 transition-all ${
+                                    className={`px-2 py-1 rounded-md border flex items-center gap-1 transition-all text-xs ${
                                         item.color === colorObj.name 
-                                        ? 'bg-white border-indigo-500 ring-1 ring-indigo-500 shadow-sm' 
-                                        : 'bg-white border-slate-200 hover:border-indigo-300'
+                                        ? 'bg-indigo-50 border-indigo-500 ring-1 ring-indigo-500 text-indigo-700 font-bold' 
+                                        : 'bg-white border-slate-200 hover:border-indigo-300 text-slate-600'
                                     }`}
                                 >
-                                    <div 
-                                        className="w-4 h-4 rounded-full border border-slate-100 shadow-sm" 
-                                        style={{ backgroundColor: colorObj.hex }}
-                                    ></div>
-                                    <span className={`text-sm ${item.color === colorObj.name ? 'font-bold text-indigo-900' : 'text-slate-600'}`}>
-                                        {colorObj.name}
-                                    </span>
-                                    {item.color === colorObj.name && <Check size={14} className="text-indigo-600 ml-1"/>}
+                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colorObj.hex }}></div>
+                                    {colorObj.name}
                                 </button>
-                            ))}
-                            {selectedRef.defaultColors.length === 0 && (
-                                <p className="text-xs text-red-400 italic mt-2">Este produto não tem cores cadastradas.</p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="text-xs text-slate-400 italic p-2">Selecione uma referência primeiro.</div>
-                    )}
-                    
+                             ))}
+                          </div>
+                      )}
                   </div>
 
-                  <div className="flex gap-3 items-end">
-                      <div className="w-24">
+                  {/* Row 2: Rolls and Quantities */}
+                  <div className="flex gap-3 items-end border-t border-slate-200 pt-3">
+                      <div className="w-28">
                         <label className="block text-xs font-medium text-slate-500 mb-1">Qtd Rolos</label>
                         <input 
                           required
                           type="number"
-                          min="0.1"
-                          step="0.1"
+                          min="0"
+                          step="0.01"
                           className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
                           value={item.rollsUsed || ''}
                           onChange={e => updateItem(index, 'rollsUsed', e.target.value)}
@@ -417,9 +431,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                         />
                       </div>
                       
-                      <div className="w-20 pb-2 text-xs text-slate-400 font-mono text-center">
-                        Total Est.: <br/>
-                        <span className="font-bold text-slate-600">{(item.piecesPerSize || 0) * selectedSizes.length}</span>
+                      <div className="flex-1 pb-2 text-xs text-slate-400 font-mono text-right">
+                        Total Estimado: <strong className="text-slate-700 text-sm">{(item.piecesPerSize || 0) * selectedSizes.length}</strong> pçs
                       </div>
 
                       <button 
@@ -427,6 +440,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                         onClick={() => handleRemoveItem(index)}
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors mb-[1px]"
                         disabled={items.length === 1}
+                        title="Remover cor"
                       >
                         <Trash2 size={18} />
                       </button>

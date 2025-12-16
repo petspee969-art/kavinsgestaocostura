@@ -7,13 +7,10 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    // Define o caminho base para produção
-    base: '/corte/',
+    // Rodando na raiz do domínio (produção padrão)
     server: {
-      // Configuração de Proxy para Desenvolvimento
       proxy: {
-        // Agora as chamadas também incluirão /corte/api
-        '/corte/api': {
+        '/api': {
           target: 'http://localhost:3000',
           changeOrigin: true,
           secure: false,
@@ -21,7 +18,6 @@ export default defineConfig(({ mode }) => {
       }
     },
     define: {
-      // Expõe a API_KEY (Gemini) para o frontend
       'process.env.API_KEY': JSON.stringify(env.API_KEY)
     }
   };
