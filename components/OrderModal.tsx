@@ -210,15 +210,15 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col">
-        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-2 md:p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[98vh] md:max-h-[90vh] overflow-y-auto flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-slate-100 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
           <div>
-            <h2 className="text-xl font-bold text-slate-800">
-                {orderToEdit ? 'Editar Ordem de Produção' : 'Nova Ordem de Produção'}
+            <h2 className="text-lg md:text-xl font-bold text-slate-800">
+                {orderToEdit ? 'Editar Ordem' : 'Nova Ordem'}
             </h2>
             <p className="text-xs text-slate-500">
-                {orderToEdit ? 'Atualize os dados necessários.' : 'Preencha os dados do corte para iniciar.'}
+                {orderToEdit ? 'Atualize os dados.' : 'Preencha os dados do corte.'}
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
@@ -226,9 +226,9 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-8 flex-1">
+        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-6 md:space-y-8 flex-1">
           
-          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
              <div>
                 <label className="block text-xs font-bold text-indigo-900 mb-1 flex items-center gap-1">
                     <Hash size={12}/> Número do Pedido (ID)
@@ -266,7 +266,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                 value={selectedRefId}
                 onChange={e => setSelectedRefId(e.target.value)}
               >
-                <option value="">Selecione uma referência...</option>
+                <option value="">Selecione...</option>
                 {references.map(ref => (
                   <option key={ref.id} value={ref.id}>{ref.code} - {ref.description}</option>
                 ))}
@@ -285,7 +285,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
                 value={fabric}
                 onChange={e => setFabric(e.target.value)}
-                // Removed disabled prop here to allow edits
               />
             </div>
           </div>
@@ -293,12 +292,11 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
           <div className="border-t border-slate-100 pt-6"></div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-slate-700 flex items-center gap-2">
                 Configuração da Grade
-                <span className="text-xs font-normal text-slate-400">(Tamanhos que serão cortados)</span>
               </h3>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                  {(['STANDARD', 'PLUS', 'CUSTOM'] as GridType[]).map(type => (
                    <button
                     key={type}
@@ -335,7 +333,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                  ) : (
                    <div className="flex gap-4 w-full justify-center">
                       {selectedSizes.map(size => (
-                        <div key={size} className="w-12 h-12 rounded-full bg-white border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 shadow-sm">
+                        <div key={size} className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-white border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 shadow-sm text-sm md:text-base">
                           {size}
                         </div>
                       ))}
@@ -351,9 +349,6 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
           <div>
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-bold text-slate-700">Detalhes do Corte (Cores e Rolos)</h3>
-              <div className="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                Digite a cor manualmente ou selecione abaixo.
-              </div>
             </div>
 
             <div className="space-y-3">
@@ -376,7 +371,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                              />
                              <input 
                                 type="color" 
-                                className="w-10 h-10 p-0 border-0 rounded cursor-pointer"
+                                className="w-10 h-10 p-0 border-0 rounded cursor-pointer flex-shrink-0"
                                 value={item.colorHex || '#000000'}
                                 onChange={e => updateItem(index, 'colorHex', e.target.value)}
                              />
@@ -406,8 +401,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                   </div>
 
                   {/* Row 2: Rolls and Quantities */}
-                  <div className="flex gap-3 items-end border-t border-slate-200 pt-3">
-                      <div className="w-28">
+                  <div className="flex flex-wrap gap-3 items-end border-t border-slate-200 pt-3">
+                      <div className="w-24 md:w-28">
                         <label className="block text-xs font-medium text-slate-500 mb-1">Qtd Rolos</label>
                         <input 
                           required
@@ -419,8 +414,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                           onChange={e => updateItem(index, 'rollsUsed', e.target.value)}
                         />
                       </div>
-                      <div className="w-32">
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Peças p/ Tam.</label>
+                      <div className="w-24 md:w-32">
+                        <label className="block text-xs font-medium text-slate-500 mb-1">Peças/Tam.</label>
                         <input 
                           required
                           type="number"
@@ -431,8 +426,8 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
                         />
                       </div>
                       
-                      <div className="flex-1 pb-2 text-xs text-slate-400 font-mono text-right">
-                        Total Estimado: <strong className="text-slate-700 text-sm">{(item.piecesPerSize || 0) * selectedSizes.length}</strong> pçs
+                      <div className="flex-1 pb-2 text-xs text-slate-400 font-mono text-right min-w-[100px]">
+                        Total: <strong className="text-slate-700 text-sm">{(item.piecesPerSize || 0) * selectedSizes.length}</strong> pçs
                       </div>
 
                       <button 
@@ -482,7 +477,7 @@ export const OrderModal: React.FC<OrderModalProps> = ({ isOpen, onClose, onSave,
               className="px-6 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium flex items-center gap-2 shadow-lg shadow-indigo-200"
             >
               <Save size={18} />
-              {orderToEdit ? 'Atualizar Ordem' : 'Criar Pedido'}
+              {orderToEdit ? 'Salvar' : 'Criar'}
             </button>
           </div>
         </form>

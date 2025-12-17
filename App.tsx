@@ -33,7 +33,9 @@ import {
   Palette,
   PlusCircle,
   Calendar,
-  LogOut
+  LogOut,
+  Menu, // Added for mobile
+  X // Added for mobile sidebar close
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -49,6 +51,7 @@ import {
 
 // REPLACED SUPABASE WITH LOCAL DB
 import { db } from './lib/db';
+import { BRAND, updateDocumentTitle } from './lib/brand'; // Brand Import
 import { Login } from './components/Login';
 import { StatCard } from './components/StatCard';
 import { OrderModal } from './components/OrderModal';
@@ -68,6 +71,7 @@ export default function App() {
   // App State
   const [activeTab, setActiveTab] = useState<'dashboard' | 'production' | 'seamstresses' | 'products' | 'reports' | 'fabrics'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile Sidebar State
   
   // Production Sub-tabs state
   const [productionStage, setProductionStage] = useState<OrderStatus>(OrderStatus.PLANNED);
@@ -122,6 +126,7 @@ export default function App() {
       setIsAuthenticated(true);
     }
     setAuthChecking(false);
+    updateDocumentTitle();
   }, []);
 
   const handleLoginSuccess = () => {
@@ -677,7 +682,7 @@ export default function App() {
     const htmlContent = `
       <html>
         <head>
-          <title>Ordens Planejadas - Kavin's</title>
+          <title>Ordens Planejadas - ${BRAND.companyName}</title>
           <style>
             body { font-family: 'Arial', sans-serif; padding: 20px; }
             .order-card { 
@@ -792,7 +797,7 @@ export default function App() {
       const htmlContent = `
         <html>
           <head>
-            <title>Estoque de Tecidos - Kavin's</title>
+            <title>Estoque de Tecidos - ${BRAND.companyName}</title>
             <style>
               body { font-family: 'Arial', sans-serif; padding: 20px; }
               table { width: 100%; border-collapse: collapse; margin-top: 20px; }
@@ -938,7 +943,7 @@ export default function App() {
           <div className="flex h-screen items-center justify-center bg-slate-50">
               <div className="text-center">
                   <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
-                  <h2 className="text-xl font-bold text-slate-700">Carregando Sistema Kavin's...</h2>
+                  <h2 className="text-xl font-bold text-slate-700">Carregando Sistema {BRAND.companyName}...</h2>
                   <p className="text-slate-500">Acessando banco de dados local.</p>
               </div>
           </div>
@@ -948,37 +953,66 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
       
-      {/* Sidebar */}
-      <aside className="w-64 bg-indigo-950 text-white flex-shrink-0 flex flex-col shadow-xl z-20">
-        <div className="p-8 border-b border-indigo-900">
-          <h1 className="text-3xl font-bold tracking-tighter bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Kavin's
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 bg-indigo-950 text-white z-40 px-4 py-3 flex justify-between items-center shadow-md">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setIsSidebarOpen(true)}>
+             <Menu size={24} />
+          </button>
+          <span className="font-bold text-lg">{BRAND.shortName}</span>
+        </div>
+        <div className="text-xs text-indigo-300 font-medium">
+             {activeTab === 'dashboard' ? 'Dashboard' : 
+              activeTab === 'production' ? 'Produção' : 
+              activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+        </div>
+      </div>
+
+      {/* Sidebar (Responsive: Fixed on Mobile, Relative on Desktop) */}
+      <aside 
+        className={`
+            fixed inset-y-0 left-0 z-50 w-64 bg-indigo-950 text-white flex flex-col shadow-xl transition-transform duration-300 ease-in-out
+            md:relative md:translate-x-0
+            ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <div className="p-8 border-b border-indigo-900 relative">
+           {/* Close Button for Mobile */}
+           <button 
+             onClick={() => setIsSidebarOpen(false)} 
+             className="absolute top-4 right-4 md:hidden text-indigo-300 hover:text-white"
+           >
+              <X size={24} />
+           </button>
+
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tighter bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            {BRAND.companyName}
           </h1>
-          <p className="text-xs text-indigo-300 mt-1 uppercase tracking-widest">Confecção & Gestão</p>
+          <p className="text-xs text-indigo-300 mt-1 uppercase tracking-widest">{BRAND.appName}</p>
         </div>
         
-        <nav className="flex-1 px-4 space-y-2 py-4">
-          <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+        <nav className="flex-1 px-4 space-y-2 py-4 overflow-y-auto">
+          <button onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <LayoutDashboard size={20} /> <span className="font-medium">Dashboard</span>
           </button>
           
-          <button onClick={() => setActiveTab('production')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'production' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+          <button onClick={() => { setActiveTab('production'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'production' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <Scissors size={20} /> <span className="font-medium">Produção</span>
           </button>
           
-          <button onClick={() => setActiveTab('fabrics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'fabrics' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+          <button onClick={() => { setActiveTab('fabrics'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'fabrics' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <Layers size={20} /> <span className="font-medium">Estoque de Tecidos</span>
           </button>
 
-          <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reports' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+          <button onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'reports' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <FileText size={20} /> <span className="font-medium">Relatórios</span>
           </button>
 
-          <button onClick={() => setActiveTab('products')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+          <button onClick={() => { setActiveTab('products'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'products' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <Tags size={20} /> <span className="font-medium">Cadastros</span>
           </button>
 
-          <button onClick={() => setActiveTab('seamstresses')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'seamstresses' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
+          <button onClick={() => { setActiveTab('seamstresses'); setIsSidebarOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'seamstresses' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'text-indigo-200 hover:bg-white/10'}`}>
             <Users size={20} /> <span className="font-medium">Costureiras</span>
           </button>
         </nav>
@@ -994,9 +1028,14 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Backdrop for Mobile Sidebar */}
+      {isSidebarOpen && (
+          <div className="md:hidden fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
+      )}
+
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative">
-        <header className="sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-200 px-8 py-4 flex justify-between items-center">
+      <main className="flex-1 overflow-y-auto relative pt-14 md:pt-0">
+        <header className="hidden md:flex sticky top-0 bg-white/80 backdrop-blur-md z-10 border-b border-slate-200 px-8 py-4 justify-between items-center">
           <h2 className="text-2xl font-bold text-slate-800">
             {activeTab === 'dashboard' && 'Visão Geral'}
             {activeTab === 'production' && 'Gerenciamento de Produção'}
@@ -1016,12 +1055,12 @@ export default function App() {
                 
                 {productionStage === OrderStatus.PLANNED && (
                     <button onClick={handlePrintPlannedOrders} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-full font-medium flex items-center gap-2 shadow-sm transition-all active:scale-95">
-                        <Printer size={18} /> Imprimir Lista
+                        <Printer size={18} /> <span className="hidden lg:inline">Imprimir Lista</span>
                     </button>
                 )}
 
                 <button onClick={() => { setOrderToEdit(null); setIsOrderModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full font-medium flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all active:scale-95">
-                    <Plus size={18} /> Nova Ordem
+                    <Plus size={18} /> <span className="hidden lg:inline">Nova Ordem</span>
                 </button>
               </>
             )}
@@ -1035,10 +1074,10 @@ export default function App() {
             {activeTab === 'fabrics' && (
               <>
                  <button onClick={handlePrintFabrics} className="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-full font-medium flex items-center gap-2 shadow-sm transition-all active:scale-95">
-                    <Printer size={18} /> Imprimir Estoque
+                    <Printer size={18} /> <span className="hidden lg:inline">Imprimir Estoque</span>
                  </button>
                  <button onClick={() => { setFabricToEdit(null); setIsFabricModalOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full font-medium flex items-center gap-2 shadow-lg shadow-indigo-200 transition-all active:scale-95">
-                   <Plus size={18} /> Entrada de Tecido
+                   <Plus size={18} /> Entrada
                  </button>
               </>
             )}
@@ -1051,12 +1090,24 @@ export default function App() {
           </div>
         </header>
 
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
+        {/* Mobile Action Bar (only when needed) */}
+        {activeTab === 'production' && (
+             <div className="md:hidden p-4 bg-white border-b border-slate-200 sticky top-0 z-30 flex gap-2 overflow-x-auto">
+                 <div className="relative flex-1">
+                    <input type="text" placeholder="Buscar..." className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-sm" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                 </div>
+                 <button onClick={() => { setOrderToEdit(null); setIsOrderModalOpen(true); }} className="bg-indigo-600 text-white p-2 rounded-lg shadow-md flex-shrink-0">
+                    <Plus size={20} />
+                 </button>
+             </div>
+        )}
+
+        <div className="p-4 lg:p-8 max-w-7xl mx-auto space-y-8 pb-20 md:pb-8">
           
           {/* DASHBOARD TAB */}
           {activeTab === 'dashboard' && (
-            <div className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="space-y-6 lg:space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
                 <StatCard title="Pedidos Planejados" value={dashboardMetrics.plannedOrdersCount} icon={ClipboardList} color="bg-blue-500" trend="Aguardando Corte" />
                 <StatCard title="Costureiras Ativas" value={dashboardMetrics.activeSeamstressesCount} icon={Users} color="bg-pink-500" trend="Costurando agora" />
                 <StatCard title="Produzido (Mês)" value={dashboardMetrics.monthPiecesProduced} icon={CalendarDays} color="bg-indigo-500" trend="Peças finalizadas" />
@@ -1068,7 +1119,7 @@ export default function App() {
                  {/* Main Weekly Chart */}
                  <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <TrendingUp size={20} className="text-indigo-600"/> Produção Semanal (7 Dias)
+                        <TrendingUp size={20} className="text-indigo-600"/> Produção Semanal
                     </h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1090,9 +1141,9 @@ export default function App() {
                  </div>
                  
                  {/* Monthly Chart */}
-                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                 <div className="hidden lg:block bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
                     <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                        <CalendarDays size={20} className="text-emerald-600"/> Produção Mensal
+                        <CalendarDays size={20} className="text-emerald-600"/> Mensal
                     </h3>
                     <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
@@ -1112,9 +1163,16 @@ export default function App() {
           {/* FABRICS TAB */}
           {activeTab === 'fabrics' && (
              <div className="space-y-6">
+                 {/* Mobile Add Button for Fabrics */}
+                 <div className="md:hidden flex gap-2">
+                    <button onClick={() => { setFabricToEdit(null); setIsFabricModalOpen(true); }} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2">
+                        <Plus size={18}/> Entrada Tecido
+                    </button>
+                 </div>
+
                  {/* Filters */}
                  <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex gap-4 items-center flex-wrap">
-                    <div className="flex-1 min-w-[200px]">
+                    <div className="flex-1 min-w-[150px]">
                         <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Tecido</label>
                         <input 
                             type="text" 
@@ -1124,7 +1182,7 @@ export default function App() {
                             onChange={e => setFabricFilters({...fabricFilters, name: e.target.value})}
                         />
                     </div>
-                    <div className="flex-1 min-w-[200px]">
+                    <div className="flex-1 min-w-[150px]">
                         <label className="block text-xs font-bold text-slate-500 mb-1">Buscar Cor</label>
                         <input 
                             type="text" 
@@ -1137,26 +1195,26 @@ export default function App() {
                  </div>
 
                  {/* Grid of Fabrics */}
-                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                 <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
                     {filteredFabrics.map(fabric => (
                         <div key={fabric.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 relative group transition-all hover:shadow-md hover:border-indigo-200">
-                             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button onClick={() => { setFabricToEdit(fabric); setIsFabricModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-1 bg-white rounded shadow-sm" title="Editar">
+                             <div className="absolute top-4 right-4 flex gap-2">
+                                <button onClick={() => { setFabricToEdit(fabric); setIsFabricModalOpen(true); }} className="text-slate-400 hover:text-indigo-600 p-1 bg-white rounded shadow-sm border border-slate-100 md:border-0 md:shadow-none md:opacity-0 md:group-hover:opacity-100 transition-opacity" title="Editar">
                                     <Edit2 size={16} />
                                 </button>
-                                <button onClick={() => handleQuickStockAdd(fabric)} className="text-emerald-500 hover:text-emerald-700 p-1 bg-white rounded shadow-sm hover:bg-emerald-50" title="Adicionar Estoque">
+                                <button onClick={() => handleQuickStockAdd(fabric)} className="text-emerald-500 hover:text-emerald-700 p-1 bg-white rounded shadow-sm border border-emerald-100 md:border-0 md:shadow-none hover:bg-emerald-50 md:opacity-0 md:group-hover:opacity-100 transition-opacity" title="Adicionar Estoque">
                                     <PlusCircle size={16} />
                                 </button>
                              </div>
 
                              <div className="flex items-center gap-3 mb-4">
                                  <div 
-                                    className="w-12 h-12 rounded-full border-2 border-slate-100 shadow-inner" 
+                                    className="w-12 h-12 rounded-full border-2 border-slate-100 shadow-inner flex-shrink-0" 
                                     style={{backgroundColor: fabric.colorHex}}
                                  ></div>
-                                 <div>
-                                     <h3 className="font-bold text-slate-800 text-lg">{fabric.name}</h3>
-                                     <p className="text-xs text-slate-500 font-medium">{fabric.color}</p>
+                                 <div className="overflow-hidden">
+                                     <h3 className="font-bold text-slate-800 text-lg truncate">{fabric.name}</h3>
+                                     <p className="text-xs text-slate-500 font-medium truncate">{fabric.color}</p>
                                  </div>
                              </div>
                              
@@ -1172,7 +1230,7 @@ export default function App() {
                              <div className="text-xs text-slate-400 border-t border-slate-50 pt-3">
                                  <p className="mb-1">
                                      <Clock size={10} className="inline mr-1"/> 
-                                     Atualizado: {new Date(fabric.updatedAt).toLocaleDateString()}
+                                     {new Date(fabric.updatedAt).toLocaleDateString()}
                                  </p>
                                  {fabric.notes && (
                                      <p className="italic text-slate-500 line-clamp-1">"{fabric.notes}"</p>
@@ -1180,35 +1238,30 @@ export default function App() {
                              </div>
                         </div>
                     ))}
-                    {filteredFabrics.length === 0 && (
-                        <div className="col-span-full py-12 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                            <Layers size={48} className="mx-auto mb-3 opacity-20"/>
-                            <p>Nenhum tecido encontrado no estoque.</p>
-                        </div>
-                    )}
                  </div>
              </div>
           )}
 
           {/* PRODUCTION TAB */}
           {activeTab === 'production' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col min-h-[500px]">
-              <div className="flex p-2 bg-slate-100/50 border-b border-slate-200">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[500px]">
+              <div className="flex p-2 bg-slate-100/50 border-b border-slate-200 overflow-x-auto">
                 {(Object.values(OrderStatus) as OrderStatus[]).map((status) => {
                     const Icon = getStageIcon(status);
                     const isActive = productionStage === status;
                     const count = stageCounts[status];
                     return (
-                        <button key={status} onClick={() => setProductionStage(status)} className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-bold transition-all relative ${isActive ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-700'}`}>
+                        <button key={status} onClick={() => setProductionStage(status)} className={`flex-1 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-2 py-2 md:py-3 px-2 md:px-4 rounded-lg text-xs md:text-sm font-bold transition-all relative whitespace-nowrap min-w-[80px] ${isActive ? 'bg-white text-indigo-700 shadow-md ring-1 ring-black/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-700'}`}>
                             <Icon size={16} className={isActive ? 'text-indigo-600' : 'text-slate-400'}/>
-                            {status}
-                            {count > 0 && <span className={`ml-1 text-xs px-2 py-0.5 rounded-full ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>{count}</span>}
+                            <span>{status}</span>
+                            {count > 0 && <span className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-200 text-slate-600'}`}>{count}</span>}
                         </button>
                     );
                 })}
               </div>
 
-              <div className="overflow-x-auto flex-1">
+              {/* TABLE VIEW (DESKTOP) */}
+              <div className="hidden md:block overflow-x-auto flex-1">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
@@ -1232,7 +1285,6 @@ export default function App() {
                         </td>
                       </tr>
                     ) : (
-                      // Only show last 10 finished orders, otherwise show all
                       (productionStage === OrderStatus.FINISHED ? filteredOrders.slice(0, 10) : filteredOrders).map(order => {
                         const isExpanded = expandedOrders.includes(order.id);
                         const totalPieces = order.items.reduce((acc, i) => acc + (order.status === OrderStatus.PLANNED ? i.estimatedPieces : i.actualPieces), 0);
@@ -1290,14 +1342,12 @@ export default function App() {
                                     {/* Edit / Delete */}
                                     <div className="h-6 w-px bg-slate-200 mx-1"></div>
                                     
-                                    {/* Allow edit in PLANNED stage OR CUTTING (Pre-confirmation: activeCuttingItems empty) */}
                                     {(order.status === OrderStatus.PLANNED || (order.status === OrderStatus.CUTTING && order.activeCuttingItems.length === 0)) && (
                                         <button onClick={() => handleEditOrder(order)} className="text-slate-400 hover:text-indigo-600 p-1.5 hover:bg-indigo-50 rounded transition-colors" title="Editar Pedido">
                                             <Edit2 size={16} />
                                         </button>
                                     )}
                                     
-                                    {/* Allow DELETE in PLANNED stage OR CUTTING (Pre-confirmation: activeCuttingItems empty) */}
                                     {(order.status === OrderStatus.PLANNED || (order.status === OrderStatus.CUTTING && order.activeCuttingItems.length === 0)) && (
                                         <button onClick={() => handleDeleteOrder(order.id)} className="text-slate-400 hover:text-red-500 p-1.5 hover:bg-red-50 rounded transition-colors" title="Excluir Pedido">
                                             <Trash2 size={16} />
@@ -1307,102 +1357,12 @@ export default function App() {
                               </td>
                             </tr>
                             
-                            {/* EXPANDED DETAILS */}
+                            {/* EXPANDED DETAILS (Desktop) */}
                             {isExpanded && (
                                 <tr className="bg-slate-50 border-b border-slate-200">
                                     <td colSpan={7} className="p-6">
-                                        <div className="flex flex-col gap-6">
-                                            {/* Stock Area */}
-                                            {(order.status === OrderStatus.CUTTING || order.status === OrderStatus.SEWING) && (
-                                                <div className={`border rounded-xl p-4 shadow-sm ${order.status === OrderStatus.SEWING ? 'bg-slate-50 border-slate-200 opacity-90' : 'bg-white border-purple-100'}`}>
-                                                    <div className="flex justify-between items-center mb-3">
-                                                        <h4 className="font-bold text-slate-700 flex items-center gap-2"><Scissors size={18} className="text-purple-600"/> Estoque em Corte {order.status === OrderStatus.SEWING && '(Restante)'}</h4>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                        {order.activeCuttingItems.length > 0 ? order.activeCuttingItems.map((item, idx) => (
-                                                            <div key={idx} className={`p-3 rounded-lg border flex flex-col ${item.actualPieces > 0 ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-50'}`}>
-                                                                <div className="flex items-center gap-2 mb-1">
-                                                                    <div className="w-3 h-3 rounded-full border border-slate-100" style={{backgroundColor: item.colorHex}}></div>
-                                                                    <span className="font-bold text-sm text-slate-700">{item.color}</span>
-                                                                </div>
-                                                                <div className="flex justify-between items-end mt-auto">
-                                                                    <div className="flex flex-wrap gap-1 max-w-[70%]">
-                                                                        {Object.entries(item.sizes).map(([s, q]) => (q as number) > 0 && <span key={s} className="text-[10px] bg-slate-50 border border-slate-100 px-1 rounded text-slate-500">{s}:{q as number}</span>)}
-                                                                    </div>
-                                                                    <span className="font-bold text-lg text-slate-800">{item.actualPieces}</span>
-                                                                </div>
-                                                            </div>
-                                                        )) : <p className="text-sm text-slate-400 italic col-span-4">Nenhum item restante no corte (ou aguardando confirmação).</p>}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {/* Splits Area */}
-                                            {(order.splits || []).length > 0 && (
-                                                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-                                                    <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-3"><Users size={18} className="text-amber-600"/> Distribuições (Costureiras)</h4>
-                                                    <div className="space-y-3">
-                                                        {(order.splits || []).map((split, idx) => {
-                                                            // Calculate 15-day deadline from creation
-                                                            const deadlineDate = new Date(split.createdAt);
-                                                            deadlineDate.setDate(deadlineDate.getDate() + 15);
-                                                            const isLate = new Date() > deadlineDate && split.status !== OrderStatus.FINISHED;
-                                                            
-                                                            return (
-                                                            <div key={`${split.id}-${idx}`} className="flex flex-col md:flex-row gap-4 border border-slate-100 rounded-lg p-3 hover:bg-slate-50 transition-colors">
-                                                                <div className="flex-shrink-0 w-48 border-r border-slate-100 pr-4 flex flex-col justify-center">
-                                                                    <div className="flex items-center gap-2 mb-1">
-                                                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">{split.seamstressName.charAt(0)}</div>
-                                                                        <div className="font-medium text-slate-800">{split.seamstressName}</div>
-                                                                    </div>
-                                                                    <div className="mt-2 flex flex-col items-start gap-1">
-                                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded w-fit ${split.status === OrderStatus.FINISHED ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>{split.status}</span>
-                                                                        {split.status === OrderStatus.FINISHED && split.finishedAt && (
-                                                                            <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                                                                                <Clock size={10} /> {new Date(split.finishedAt).toLocaleDateString()}
-                                                                            </span>
-                                                                        )}
-                                                                        {split.status !== OrderStatus.FINISHED && (
-                                                                            <span className={`text-[10px] flex items-center gap-1 mt-1 font-medium ${isLate ? 'text-red-500' : 'text-slate-400'}`}>
-                                                                                <Calendar size={10} /> Previsão: {deadlineDate.toLocaleDateString()}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                                     {split.items.map((item, i) => (
-                                                                         <div key={i} className="bg-white border border-slate-100 rounded p-2 text-sm">
-                                                                             <div className="flex items-center gap-1 mb-1">
-                                                                                 <div className="w-2 h-2 rounded-full" style={{backgroundColor: item.colorHex}}></div>
-                                                                                 <span className="font-medium text-slate-600">{item.color}</span>
-                                                                             </div>
-                                                                             <div className="font-bold text-right text-slate-800 mb-1">{item.actualPieces} pçs</div>
-                                                                             {/* SHOW SIZES BREAKDOWN */}
-                                                                             <div className="flex flex-wrap gap-1 justify-end">
-                                                                                 {Object.entries(item.sizes).map(([size, qty]) => (
-                                                                                     (qty as number) > 0 && (
-                                                                                         <span key={size} className="text-[10px] bg-slate-50 border border-slate-100 px-1 rounded text-slate-500">
-                                                                                             {size}:{qty}
-                                                                                         </span>
-                                                                                     )
-                                                                                 ))}
-                                                                             </div>
-                                                                         </div>
-                                                                     ))}
-                                                                </div>
-                                                                <div className="flex-shrink-0 flex items-center pl-2 border-l border-slate-100">
-                                                                    {split.status !== OrderStatus.FINISHED ? (
-                                                                        <button onClick={() => handleMarkSplitFinished(order.id, idx)} className="text-emerald-600 hover:bg-emerald-50 px-3 py-2 rounded-lg text-xs font-bold border border-emerald-200 flex items-center gap-1"><PackageCheck size={16} /> Baixa</button>
-                                                                    ) : (
-                                                                        <div className="text-emerald-500 flex flex-col items-center px-2"><CheckCircle2 size={20} /><span className="text-[10px] font-bold">Concluído</span></div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {/* Same expanded content logic as desktop */}
+                                        <ExpandedOrderDetails order={order} fabrics={fabrics} handleMarkSplitFinished={handleMarkSplitFinished} />
                                     </td>
                                 </tr>
                             )}
@@ -1413,80 +1373,140 @@ export default function App() {
                   </tbody>
                 </table>
               </div>
+
+              {/* MOBILE CARDS VIEW */}
+              <div className="md:hidden flex flex-col p-4 gap-4">
+                 {filteredOrders.length === 0 && (
+                     <div className="text-center text-slate-400 py-8">
+                         <Archive size={32} className="mx-auto mb-2 opacity-50"/>
+                         <p className="text-sm">Nenhum pedido nesta etapa.</p>
+                     </div>
+                 )}
+                 {filteredOrders.map(order => {
+                    const totalPieces = order.items.reduce((acc, i) => acc + (order.status === OrderStatus.PLANNED ? i.estimatedPieces : i.actualPieces), 0);
+                    const itemsInCutting = order.activeCuttingItems.reduce((acc, i) => acc + i.actualPieces, 0);
+                    const isExpanded = expandedOrders.includes(order.id);
+
+                    return (
+                        <div key={order.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                             <div className="p-4" onClick={() => setExpandedOrders(prev => prev.includes(order.id) ? prev.filter(id => id !== order.id) : [...prev, order.id])}>
+                                 <div className="flex justify-between items-start mb-2">
+                                     <div>
+                                         <div className="flex items-center gap-2">
+                                            <span className="font-mono font-bold text-indigo-700">#{order.id}</span>
+                                            <span className="text-xs text-slate-400">{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
+                                         </div>
+                                         <h4 className="font-bold text-slate-800">{order.referenceCode}</h4>
+                                     </div>
+                                     <div className="text-right">
+                                         <span className="block font-bold text-lg text-slate-800">{totalPieces} pçs</span>
+                                         <span className="text-xs text-slate-500">{order.fabric}</span>
+                                     </div>
+                                 </div>
+                                 
+                                 <div className="text-sm text-slate-600 mb-3 line-clamp-1">{order.description}</div>
+
+                                 <div className="flex gap-1 mb-4">
+                                    {order.items.map(i => (
+                                        <div key={i.color} className="w-4 h-4 rounded-full border border-slate-200" style={{backgroundColor: i.colorHex || '#999'}} title={i.color}></div>
+                                    ))}
+                                 </div>
+
+                                 {/* Mobile Actions */}
+                                 <div className="flex gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                                     {order.status === OrderStatus.PLANNED && (
+                                        <button onClick={() => initiateMoveToCutting(order)} className="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm">
+                                            Iniciar Corte
+                                        </button>
+                                     )}
+                                     {order.status === OrderStatus.CUTTING && itemsInCutting === 0 && order.activeCuttingItems.length === 0 && (
+                                        <button onClick={() => initiateConfirmCut(order)} className="flex-1 bg-purple-600 text-white py-2 rounded-lg text-sm font-bold shadow-sm">
+                                            Confirmar
+                                        </button>
+                                     )}
+                                     {((order.status === OrderStatus.CUTTING && itemsInCutting > 0) || order.status === OrderStatus.SEWING) && itemsInCutting > 0 && (
+                                        <button onClick={() => initiateDistribute(order)} className="flex-1 bg-amber-500 text-white py-2 rounded-lg text-sm font-bold shadow-sm">
+                                            Distribuir
+                                        </button>
+                                     )}
+                                 </div>
+                             </div>
+                             
+                             {/* Mobile Expanded Details */}
+                             {isExpanded && (
+                                 <div className="bg-slate-50 border-t border-slate-100 p-4">
+                                     <ExpandedOrderDetails order={order} fabrics={fabrics} handleMarkSplitFinished={handleMarkSplitFinished} isMobile={true} />
+                                     
+                                     {/* Edit/Delete for mobile in expanded view */}
+                                     {(order.status === OrderStatus.PLANNED || (order.status === OrderStatus.CUTTING && order.activeCuttingItems.length === 0)) && (
+                                         <div className="flex gap-3 mt-4 pt-4 border-t border-slate-200">
+                                             <button onClick={() => handleEditOrder(order)} className="flex-1 py-2 border border-slate-300 rounded-lg text-slate-600 text-sm font-medium flex justify-center items-center gap-2">
+                                                 <Edit2 size={16} /> Editar
+                                             </button>
+                                             <button onClick={() => handleDeleteOrder(order.id)} className="flex-1 py-2 border border-red-200 bg-red-50 rounded-lg text-red-600 text-sm font-medium flex justify-center items-center gap-2">
+                                                 <Trash2 size={16} /> Excluir
+                                             </button>
+                                         </div>
+                                     )}
+                                 </div>
+                             )}
+                        </div>
+                    );
+                 })}
+              </div>
             </div>
           )}
-
-          {/* OTHER TABS are structurally similar and rendered correctly above */}
           
           {/* SEAMSTRESSES TAB */}
           {activeTab === 'seamstresses' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {seamstresses.map(seamstress => {
-                const activeSplits = orders.reduce((acc, o) => acc + (o.splits || []).filter(s => s.seamstressId === seamstress.id && s.status === OrderStatus.SEWING).length, 0);
-                const completedSplits = orders.reduce((acc, o) => acc + (o.splits || []).filter(s => s.seamstressId === seamstress.id && s.status === OrderStatus.FINISHED).length, 0);
-                
-                return (
-                  <div key={seamstress.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative group">
-                    <button 
-                        onClick={() => { setSeamstressToEdit(seamstress); setIsSeamstressModalOpen(true); }}
-                        className="absolute top-4 right-4 text-slate-300 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                        <Edit2 size={18} />
+             <div className="space-y-6">
+                 {/* Mobile Add Button */}
+                 <div className="md:hidden">
+                    <button onClick={() => { setSeamstressToEdit(null); setIsSeamstressModalOpen(true); }} className="w-full bg-indigo-600 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-2">
+                        <Plus size={18}/> Cadastrar Costureira
                     </button>
+                 </div>
 
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xl font-bold">
-                          {seamstress.name.charAt(0)}
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-slate-800">{seamstress.name}</h3>
-                          <p className="text-xs text-slate-500">{seamstress.specialty} • {seamstress.phone}</p>
-                          {seamstress.city && <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-1"><MapPin size={10}/> {seamstress.city}</p>}
-                        </div>
-                      </div>
-                      <span className={`w-3 h-3 rounded-full ${seamstress.active ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-xl p-4 mb-4">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-amber-500">{activeSplits}</p>
-                        <p className="text-xs font-medium text-slate-500 uppercase">Em andamento</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-emerald-500">{completedSplits}</p>
-                        <p className="text-xs font-medium text-slate-500 uppercase">Finalizados</p>
-                      </div>
-                    </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {seamstresses.map(seamstress => {
+                        const activeSplits = orders.reduce((acc, o) => acc + (o.splits || []).filter(s => s.seamstressId === seamstress.id && s.status === OrderStatus.SEWING).length, 0);
+                        const completedSplits = orders.reduce((acc, o) => acc + (o.splits || []).filter(s => s.seamstressId === seamstress.id && s.status === OrderStatus.FINISHED).length, 0);
+                        
+                        return (
+                        <div key={seamstress.id} className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative group">
+                            <button 
+                                onClick={() => { setSeamstressToEdit(seamstress); setIsSeamstressModalOpen(true); }}
+                                className="absolute top-4 right-4 text-slate-300 hover:text-indigo-600 md:opacity-0 md:group-hover:opacity-100 transition-opacity p-2"
+                            >
+                                <Edit2 size={18} />
+                            </button>
 
-                    <div className="space-y-2">
-                       <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trabalhos Recentes</h4>
-                       {orders.flatMap(o => (o.splits || []).filter(s => s.seamstressId === seamstress.id).map(s => ({...s, orderCode: o.referenceCode}))).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3).map((split, i) => (
-                         <div key={i} className="text-sm flex justify-between items-center py-1 border-b border-slate-100 last:border-0">
-                           <div className="flex flex-col">
-                             <span className="text-slate-600 truncate max-w-[120px]">{split.orderCode}</span>
-                             <span className="text-xs text-slate-400">{split.items.length} cores</span>
-                           </div>
-                           <span className={`text-xs px-2 py-0.5 rounded-full ${split.status === OrderStatus.FINISHED ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                             {split.status === OrderStatus.FINISHED ? 'Feito' : 'Fazendo'}
-                           </span>
-                         </div>
-                       ))}
-                       {orders.flatMap(o => (o.splits || []).filter(s => s.seamstressId === seamstress.id)).length === 0 && <span className="text-xs text-slate-400 italic">Nenhum histórico recente.</span>}
-                    </div>
-                  </div>
-                )
-              })}
-              
-              <button 
-                onClick={() => { setSeamstressToEdit(null); setIsSeamstressModalOpen(true); }}
-                className="border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
-              >
-                <div className="w-12 h-12 rounded-full bg-slate-100 group-hover:bg-indigo-100 flex items-center justify-center mb-3 transition-colors">
-                  <Plus size={24} className="group-hover:text-indigo-600" />
+                            <div className="flex items-start justify-between mb-4">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center text-xl font-bold">
+                                {seamstress.name.charAt(0)}
+                                </div>
+                                <div>
+                                <h3 className="font-bold text-slate-800">{seamstress.name}</h3>
+                                <p className="text-xs text-slate-500">{seamstress.specialty} • {seamstress.phone}</p>
+                                </div>
+                            </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-4 bg-slate-50 rounded-xl p-4 mb-4">
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-amber-500">{activeSplits}</p>
+                                <p className="text-xs font-medium text-slate-500 uppercase">Em andamento</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-2xl font-bold text-emerald-500">{completedSplits}</p>
+                                <p className="text-xs font-medium text-slate-500 uppercase">Finalizados</p>
+                            </div>
+                            </div>
+                        </div>
+                        )
+                    })}
                 </div>
-                <span className="font-medium">Cadastrar Costureira</span>
-              </button>
             </div>
           )}
         </div>
@@ -1541,3 +1561,95 @@ export default function App() {
     </div>
   );
 }
+
+// Extracted Component for Expanded Details (Reused in Desktop and Mobile)
+const ExpandedOrderDetails = ({ order, fabrics, handleMarkSplitFinished, isMobile = false }: { order: ProductionOrder, fabrics: Fabric[], handleMarkSplitFinished: any, isMobile?: boolean }) => {
+    return (
+        <div className="flex flex-col gap-6">
+            {/* Stock Area */}
+            {(order.status === OrderStatus.CUTTING || order.status === OrderStatus.SEWING) && (
+                <div className={`border rounded-xl p-4 shadow-sm ${order.status === OrderStatus.SEWING ? 'bg-slate-50 border-slate-200 opacity-90' : 'bg-white border-purple-100'}`}>
+                    <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-bold text-slate-700 flex items-center gap-2 text-sm md:text-base"><Scissors size={18} className="text-purple-600"/> Estoque em Corte {order.status === OrderStatus.SEWING && '(Restante)'}</h4>
+                    </div>
+                    <div className={`grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-3`}>
+                        {order.activeCuttingItems.length > 0 ? order.activeCuttingItems.map((item, idx) => (
+                            <div key={idx} className={`p-3 rounded-lg border flex flex-col ${item.actualPieces > 0 ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-100 border-slate-200 opacity-50'}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <div className="w-3 h-3 rounded-full border border-slate-100" style={{backgroundColor: item.colorHex}}></div>
+                                    <span className="font-bold text-xs md:text-sm text-slate-700">{item.color}</span>
+                                </div>
+                                <div className="flex justify-between items-end mt-auto">
+                                    <div className="flex flex-wrap gap-1 max-w-[70%]">
+                                        {Object.entries(item.sizes).map(([s, q]) => (q as number) > 0 && <span key={s} className="text-[10px] bg-slate-50 border border-slate-100 px-1 rounded text-slate-500">{s}:{q as number}</span>)}
+                                    </div>
+                                    <span className="font-bold text-base md:text-lg text-slate-800">{item.actualPieces}</span>
+                                </div>
+                            </div>
+                        )) : <p className="text-sm text-slate-400 italic col-span-4">Nenhum item restante no corte (ou aguardando confirmação).</p>}
+                    </div>
+                </div>
+            )}
+            {/* Splits Area */}
+            {(order.splits || []).length > 0 && (
+                <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+                    <h4 className="font-bold text-slate-700 flex items-center gap-2 mb-3 text-sm md:text-base"><Users size={18} className="text-amber-600"/> Distribuições (Costureiras)</h4>
+                    <div className="space-y-3">
+                        {(order.splits || []).map((split, idx) => {
+                            const deadlineDate = new Date(split.createdAt);
+                            deadlineDate.setDate(deadlineDate.getDate() + 15);
+                            const isLate = new Date() > deadlineDate && split.status !== OrderStatus.FINISHED;
+                            
+                            return (
+                            <div key={`${split.id}-${idx}`} className="flex flex-col md:flex-row gap-4 border border-slate-100 rounded-lg p-3 hover:bg-slate-50 transition-colors">
+                                <div className={`flex-shrink-0 ${isMobile ? 'w-full border-b pb-2 mb-2' : 'w-48 border-r'} border-slate-100 pr-4 flex flex-row md:flex-col items-center md:items-start justify-between md:justify-center`}>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">{split.seamstressName.charAt(0)}</div>
+                                        <div className="font-medium text-slate-800">{split.seamstressName}</div>
+                                    </div>
+                                    <div className="flex md:flex-col items-center md:items-start gap-2 md:gap-1">
+                                        <span className={`text-xs font-bold px-2 py-0.5 rounded w-fit ${split.status === OrderStatus.FINISHED ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>{split.status}</span>
+                                        {/* Mobile Finish Button inside header */}
+                                        {isMobile && split.status !== OrderStatus.FINISHED && (
+                                            <button onClick={() => handleMarkSplitFinished(order.id, idx)} className="ml-2 text-emerald-600 px-2 py-1 rounded bg-emerald-50 text-xs font-bold border border-emerald-200">Baixa</button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className={`flex-1 grid ${isMobile ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'} gap-2`}>
+                                        {split.items.map((item, i) => (
+                                            <div key={i} className="bg-white border border-slate-100 rounded p-2 text-sm">
+                                                <div className="flex items-center gap-1 mb-1">
+                                                    <div className="w-2 h-2 rounded-full" style={{backgroundColor: item.colorHex}}></div>
+                                                    <span className="font-medium text-slate-600 text-xs">{item.color}</span>
+                                                </div>
+                                                <div className="font-bold text-right text-slate-800 mb-1">{item.actualPieces} pçs</div>
+                                                <div className="flex flex-wrap gap-1 justify-end">
+                                                    {Object.entries(item.sizes).map(([size, qty]) => (
+                                                        (qty as number) > 0 && (
+                                                            <span key={size} className="text-[10px] bg-slate-50 border border-slate-100 px-1 rounded text-slate-500">
+                                                                {size}:{qty}
+                                                            </span>
+                                                        )
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                </div>
+                                {!isMobile && (
+                                    <div className="flex-shrink-0 flex items-center pl-2 border-l border-slate-100">
+                                        {split.status !== OrderStatus.FINISHED ? (
+                                            <button onClick={() => handleMarkSplitFinished(order.id, idx)} className="text-emerald-600 hover:bg-emerald-50 px-3 py-2 rounded-lg text-xs font-bold border border-emerald-200 flex items-center gap-1"><PackageCheck size={16} /> Baixa</button>
+                                        ) : (
+                                            <div className="text-emerald-500 flex flex-col items-center px-2"><CheckCircle2 size={20} /><span className="text-[10px] font-bold">Concluído</span></div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
