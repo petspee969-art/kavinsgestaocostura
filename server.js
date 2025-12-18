@@ -1,3 +1,4 @@
+
 import express from 'express';
 import mysql from 'mysql2/promise';
 import cors from 'cors';
@@ -11,22 +12,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// Default to port 3002 as requested
+const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// SERVE STATIC FILES (React Build)
-// Serves files from 'dist' directory to the root path
-app.use(express.static(path.join(__dirname, 'dist')));
+// SERVE STATIC FILES (React Build) from /corte subpath
+app.use('/corte', express.static(path.join(__dirname, 'dist')));
 
 // Database Connection Pool
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || 'localhost',
+    host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'password',
-    database: process.env.DB_NAME || 'kavins_db',
+    password: process.env.DB_PASSWORD || 'Benvindo199380@',
+    database: process.env.DB_NAME || 'corte',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
@@ -44,25 +45,24 @@ const toCamel = (o) => {
     return n;
 };
 
-// --- API ROUTES (Prefixed with /api) ---
+// --- API ROUTES (Prefixed with /corte/api) ---
+const router = express.Router();
 
 // PRODUCTS
-app.get('/api/products', async (req, res) => {
+router.get('/products', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products ORDER BY code ASC');
-        // Parse JSON fields
         const products = rows.map(r => ({
             ...toCamel(r),
             defaultColors: typeof r.default_colors === 'string' ? JSON.parse(r.default_colors) : r.default_colors
         }));
         res.json(products);
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.post('/api/products', async (req, res) => {
+router.post('/products', async (req, res) => {
     try {
         const { id, code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
         const sql = `INSERT INTO products (id, code, description, default_fabric, default_grid, estimated_pieces_per_roll, default_colors) VALUES (?, ?, ?, ?, ?, ?, ?)`;
@@ -73,7 +73,7 @@ app.post('/api/products', async (req, res) => {
     }
 });
 
-app.put('/api/products/:id', async (req, res) => {
+router.put('/products/:id', async (req, res) => {
     try {
         const { code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
         const sql = `UPDATE products SET code=?, description=?, default_fabric=?, default_grid=?, estimated_pieces_per_roll=?, default_colors=? WHERE id=?`;
@@ -84,7 +84,7 @@ app.put('/api/products/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/products/:id', async (req, res) => {
+router.delete('/products/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM products WHERE id = ?', [req.params.id]);
         res.json({ message: 'Deleted' });
@@ -94,7 +94,7 @@ app.delete('/api/products/:id', async (req, res) => {
 });
 
 // SEAMSTRESSES
-app.get('/api/seamstresses', async (req, res) => {
+router.get('/seamstresses', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
         res.json(toCamel(rows));
@@ -103,7 +103,7 @@ app.get('/api/seamstresses', async (req, res) => {
     }
 });
 
-app.post('/api/seamstresses', async (req, res) => {
+router.post('/seamstresses', async (req, res) => {
     try {
         const { id, name, phone, specialty, active, address, city } = req.body;
         const sql = `INSERT INTO seamstresses (id, name, phone, specialty, active, address, city) VALUES (?, ?, ?, ?, ?, ?, ?)`;
@@ -114,7 +114,7 @@ app.post('/api/seamstresses', async (req, res) => {
     }
 });
 
-app.put('/api/seamstresses/:id', async (req, res) => {
+router.put('/seamstresses/:id', async (req, res) => {
     try {
         const { name, phone, specialty, active, address, city } = req.body;
         const sql = `UPDATE seamstresses SET name=?, phone=?, specialty=?, active=?, address=?, city=? WHERE id=?`;
@@ -125,7 +125,7 @@ app.put('/api/seamstresses/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/seamstresses/:id', async (req, res) => {
+router.delete('/seamstresses/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM seamstresses WHERE id = ?', [req.params.id]);
         res.json({ message: 'Deleted' });
@@ -135,7 +135,7 @@ app.delete('/api/seamstresses/:id', async (req, res) => {
 });
 
 // FABRICS
-app.get('/api/fabrics', async (req, res) => {
+router.get('/fabrics', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
         res.json(toCamel(rows));
@@ -144,19 +144,18 @@ app.get('/api/fabrics', async (req, res) => {
     }
 });
 
-app.post('/api/fabrics', async (req, res) => {
+router.post('/fabrics', async (req, res) => {
     try {
         const { id, name, color, colorHex, stockRolls, notes, createdAt, updatedAt } = req.body;
         const sql = `INSERT INTO fabrics (id, name, color, color_hex, stock_rolls, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
         await pool.query(sql, [id, name, color, colorHex, stockRolls, notes, new Date(createdAt), new Date(updatedAt)]);
         res.status(201).json({ message: 'Created' });
     } catch (err) {
-        console.log(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.put('/api/fabrics/:id', async (req, res) => {
+router.put('/fabrics/:id', async (req, res) => {
     try {
         const { name, color, colorHex, stockRolls, notes, updatedAt } = req.body;
         const sql = `UPDATE fabrics SET name=?, color=?, color_hex=?, stock_rolls=?, notes=?, updated_at=? WHERE id=?`;
@@ -167,7 +166,7 @@ app.put('/api/fabrics/:id', async (req, res) => {
     }
 });
 
-app.delete('/api/fabrics/:id', async (req, res) => {
+router.delete('/fabrics/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM fabrics WHERE id = ?', [req.params.id]);
         res.json({ message: 'Deleted' });
@@ -177,7 +176,7 @@ app.delete('/api/fabrics/:id', async (req, res) => {
 });
 
 // ORDERS
-app.get('/api/orders', async (req, res) => {
+router.get('/orders', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
         const orders = rows.map(r => {
@@ -189,12 +188,11 @@ app.get('/api/orders', async (req, res) => {
         });
         res.json(orders);
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.post('/api/orders', async (req, res) => {
+router.post('/orders', async (req, res) => {
     try {
         const o = req.body;
         const sql = `
@@ -213,12 +211,11 @@ app.post('/api/orders', async (req, res) => {
         await pool.query(sql, values);
         res.status(201).json({ message: 'Created' });
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.put('/api/orders/:id', async (req, res) => {
+router.put('/orders/:id', async (req, res) => {
     try {
         const o = req.body;
         const sql = `
@@ -240,12 +237,11 @@ app.put('/api/orders/:id', async (req, res) => {
         await pool.query(sql, values);
         res.json({ message: 'Updated' });
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/orders/:id', async (req, res) => {
+router.delete('/orders/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
         res.json({ message: 'Deleted' });
@@ -254,14 +250,21 @@ app.delete('/api/orders/:id', async (req, res) => {
     }
 });
 
+// Apply router to /corte/api
+app.use('/corte/api', router);
+
 // Fallback for SPA (Single Page Application)
-// This catches any route not handled by API and serves index.html
-app.get('*', (req, res) => {
+// Re-serves index.html for any /corte/* route
+app.get('/corte/*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Root redirect to subpath for convenience
+app.get('/', (req, res) => {
+    res.redirect('/corte/');
 });
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log(`App accessible at http://localhost:${PORT}`);
-    console.log(`Database Host: ${process.env.DB_HOST}`);
+    console.log(`App accessible at http://localhost:${PORT}/corte/`);
 });

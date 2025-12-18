@@ -1,3 +1,4 @@
+
 /**
  * API DATABASE ADAPTER
  * 
@@ -7,8 +8,8 @@
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
-// Base URL for the API (Relative to domain root)
-const API_BASE = '/api';
+// Base URL for the API (must match server config)
+const API_BASE = '/corte/api';
 
 // Generic Helper for API Calls
 const API = {
