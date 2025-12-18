@@ -1,25 +1,20 @@
+PASSO A PASSO FINAL (VPS):
 
-PASSO A PASSO PARA CORREÇÃO NO VPS:
-
-1. Atualize o Nginx:
+1. ATUALIZE O NGINX:
    sudo nano /etc/nginx/sites-available/gestaokavins.com.br
-   (Apague o conteúdo antigo e cole o novo NGINX_CONFIG.conf)
+   (Cole o conteúdo do NGINX_CONFIG.conf atualizado)
 
-2. Reinicie o Nginx:
-   sudo nginx -t && sudo systemctl restart nginx
+2. TESTE E REINICIE O NGINX:
+   sudo nginx -t
+   sudo systemctl restart nginx
 
-3. No projeto CORTE:
-   # Certifique-se que o build está atualizado
-   cd /var/www/gestaokavins/corte
+3. NO PROJETO CORTE (/var/www/gestaokavins/corte):
    npm run build
-   
-   # Reinicie o processo no PM2
-   pm2 restart kavins-corte
-   # Caso ainda não exista: pm2 start server.js --name "kavins-corte"
+   pm2 restart kavins-corte || pm2 start server.js --name "kavins-corte"
 
-4. No projeto PRINCIPAL:
-   # Garanta que ele está rodando na porta correta (ex: 3001) se usar API
+4. NO PROJETO PRINCIPAL (/var/www/gestaokavins/pedido):
    pm2 restart kavins-principal
 
-DICA: Se ao acessar /corte ele ainda carregar o antigo, limpe o cache do navegador (Ctrl + F5).
-O uso de 'proxy_pass' para a porta 3002 isola totalmente os dois ambientes.
+LIMPEZA DE CACHE:
+Se ao acessar gestaokavins.com.br/corte ainda aparecer o projeto principal, 
+aperte CTRL + F5 no navegador para limpar o cache de rota.

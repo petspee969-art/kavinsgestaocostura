@@ -1,4 +1,3 @@
-
 import express from 'express';
 import mysql from 'mysql2/promise';
 import cors from 'cors';
@@ -17,11 +16,9 @@ const PORT = process.env.PORT || 3002;
 app.use(cors());
 app.use(express.json());
 
-// Caminho absoluto para a pasta dist (frontend buildado)
-// Se o server.js estiver na raiz do projeto 'corte', e a pasta dist estiver lá:
+// No VPS, o dist estará em /var/www/gestaokavins/corte/dist
 const distPath = path.resolve(__dirname, 'dist');
 
-// Configuração do Banco de Dados
 const pool = mysql.createPool({
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',
@@ -43,7 +40,6 @@ const toCamel = (o) => {
     return n;
 };
 
-// API ROUTES - Devem vir ANTES do express.static para não serem confundidas com arquivos
 const router = express.Router();
 
 router.get('/products', async (req, res) => {
@@ -83,23 +79,21 @@ router.get('/fabrics', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Registrar rotas da API sob /corte/api
+// API /corte/api
 app.use('/corte/api', router);
 
-// Servir arquivos estáticos do frontend buildado
+// Static files /corte
 app.use('/corte', express.static(distPath));
 
-// Redirecionamento da raiz (apenas se acessar direto a porta 3002)
-app.get('/', (req, res) => {
-    res.redirect('/corte/');
-});
-
-// Fallback para SPA (React Router) - Deve ser a última rota
+// Fallback para React Router no projeto Corte
 app.get('/corte/*', (req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
 });
 
+app.get('/', (req, res) => {
+    res.redirect('/corte/');
+});
+
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor Corte Ativo na porta ${PORT}`);
-    console.log(`📁 Servindo arquivos de: ${distPath}`);
+    console.log(`🚀 Servidor Corte Ativo em http://127.0.0.1:${PORT}/corte`);
 });
