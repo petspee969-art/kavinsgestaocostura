@@ -12,21 +12,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// Porta 3002 conforme solicitado para rodar no VPS
 const PORT = process.env.PORT || 3002;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Caminho da build do Vite
-const distPath = path.join(__dirname, 'dist');
+// Caminho absoluto para a pasta dist (frontend buildado)
+// Se o server.js estiver na raiz do projeto 'corte', e a pasta dist estiver lá:
+const distPath = path.resolve(__dirname, 'dist');
 
-// SERVE STATIC FILES (React Build) obrigatoriamente sob o prefixo /corte
-// Isso garante que gestaokavins.com.br/corte/assets/file.js seja encontrado em dist/assets/file.js
-app.use('/corte', express.static(distPath));
-
-// Configuração do Banco de Dados MariaDB/MySQL local
+// Configuração do Banco de Dados
 const pool = mysql.createPool({
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',
@@ -37,7 +32,6 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Auxiliar para camelCase
 const toCamel = (o) => {
     if (!o || typeof o !== 'object') return o;
     if (Array.isArray(o)) return o.map(toCamel);
@@ -49,10 +43,9 @@ const toCamel = (o) => {
     return n;
 };
 
-// --- API ROUTES (Prefixo /corte/api) ---
+// API ROUTES - Devem vir ANTES do express.static para não serem confundidas com arquivos
 const router = express.Router();
 
-// Produtos
 router.get('/products', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products ORDER BY code ASC');
@@ -63,7 +56,6 @@ router.get('/products', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Pedidos (Orders)
 router.get('/orders', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
@@ -77,7 +69,6 @@ router.get('/orders', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Costureiras
 router.get('/seamstresses', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
@@ -85,7 +76,6 @@ router.get('/seamstresses', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Tecidos
 router.get('/fabrics', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
@@ -93,22 +83,23 @@ router.get('/fabrics', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// Aplica o roteador de API
+// Registrar rotas da API sob /corte/api
 app.use('/corte/api', router);
 
-// FALLBACK PARA SPA
-// Qualquer rota que comece com /corte/ e não seja estática ou API, devolve o index.html
-app.get('/corte/*', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'));
-});
+// Servir arquivos estáticos do frontend buildado
+app.use('/corte', express.static(distPath));
 
-// Redirecionamento amigável da raiz (apenas local)
+// Redirecionamento da raiz (apenas se acessar direto a porta 3002)
 app.get('/', (req, res) => {
     res.redirect('/corte/');
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Projeto Corte rodando na porta ${PORT}`);
-    console.log(`🔗 API disponível em: /corte/api`);
-    console.log(`📂 Frontend servido em: /corte/`);
+// Fallback para SPA (React Router) - Deve ser a última rota
+app.get('/corte/*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+});
+
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Servidor Corte Ativo na porta ${PORT}`);
+    console.log(`📁 Servindo arquivos de: ${distPath}`);
 });

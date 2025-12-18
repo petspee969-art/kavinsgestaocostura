@@ -1,21 +1,25 @@
 
-PARA O SITE RODAR NO SEU SUBDOMÍNIO /CORTE:
+PASSO A PASSO PARA CORREÇÃO NO VPS:
 
-1. SSH no VPS e navegue até a pasta:
+1. Atualize o Nginx:
+   sudo nano /etc/nginx/sites-available/gestaokavins.com.br
+   (Apague o conteúdo antigo e cole o novo NGINX_CONFIG.conf)
+
+2. Reinicie o Nginx:
+   sudo nginx -t && sudo systemctl restart nginx
+
+3. No projeto CORTE:
+   # Certifique-se que o build está atualizado
    cd /var/www/gestaokavins/corte
-
-2. Instale e faça o Build:
-   npm install
    npm run build
+   
+   # Reinicie o processo no PM2
+   pm2 restart kavins-corte
+   # Caso ainda não exista: pm2 start server.js --name "kavins-corte"
 
-3. Configure o Nginx:
-   Copie o conteúdo do arquivo NGINX_CONFIG.conf gerado aqui para o seu arquivo de configuração do Nginx no VPS.
-   Geralmente fica em: /etc/nginx/sites-available/gestaokavins.com.br
+4. No projeto PRINCIPAL:
+   # Garanta que ele está rodando na porta correta (ex: 3001) se usar API
+   pm2 restart kavins-principal
 
-4. Reinicie o Nginx:
-   sudo systemctl restart nginx
-
-5. Inicie o servidor Node com PM2:
-   pm2 start server.js --name "kavins-corte"
-
-O problema da tela carregando o site principal é porque o Nginx ainda não sabe que o caminho /corte deve ser enviado para a porta 3002.
+DICA: Se ao acessar /corte ele ainda carregar o antigo, limpe o cache do navegador (Ctrl + F5).
+O uso de 'proxy_pass' para a porta 3002 isola totalmente os dois ambientes.
