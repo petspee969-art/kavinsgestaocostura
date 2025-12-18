@@ -1,3 +1,4 @@
+
 import express from 'express';
 import mysql from 'mysql2/promise';
 import cors from 'cors';
@@ -5,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
+// Load environment variables
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,26 +15,23 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// MIDDLEWARES
 app.use(cors());
 app.use(express.json());
 
-// SERVE STATIC FILES (React Build)
-// Serves files from 'dist' directory to the root path
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Database Connection Pool
+// DATABASE CONNECTION
+// Using a pool for better performance and reconnection handling
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'password',
-    database: process.env.DB_NAME || 'kavins_db',
+    database: process.env.DB_NAME || 'production_db',
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
 });
 
-// Helper to convert DB rows (snake_case) to App types (camelCase)
+// UTILS: Snake Case (DB) to Camel Case (Frontend)
 const toCamel = (o) => {
     if (!o || typeof o !== 'object') return o;
     if (Array.isArray(o)) return o.map(toCamel);
@@ -44,224 +43,95 @@ const toCamel = (o) => {
     return n;
 };
 
-// --- API ROUTES (Prefixed with /api) ---
+// --- API ROUTES (/api/...) ---
 
-// PRODUCTS
-app.get('/api/products', async (req, res) => {
+// Generic Get All
+const handleGetAll = (table, orderField = 'id') => async (req, res) => {
     try {
-        const [rows] = await pool.query('SELECT * FROM products ORDER BY code ASC');
-        // Parse JSON fields
-        const products = rows.map(r => ({
-            ...toCamel(r),
-            defaultColors: typeof r.default_colors === 'string' ? JSON.parse(r.default_colors) : r.default_colors
-        }));
-        res.json(products);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/products', async (req, res) => {
-    try {
-        const { id, code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
-        const sql = `INSERT INTO products (id, code, description, default_fabric, default_grid, estimated_pieces_per_roll, default_colors) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, JSON.stringify(defaultColors)]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/api/products/:id', async (req, res) => {
-    try {
-        const { code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
-        const sql = `UPDATE products SET code=?, description=?, default_fabric=?, default_grid=?, estimated_pieces_per_roll=?, default_colors=? WHERE id=?`;
-        await pool.query(sql, [code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, JSON.stringify(defaultColors), req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/products/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM products WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// SEAMSTRESSES
-app.get('/api/seamstresses', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
-        res.json(toCamel(rows));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/seamstresses', async (req, res) => {
-    try {
-        const { id, name, phone, specialty, active, address, city } = req.body;
-        const sql = `INSERT INTO seamstresses (id, name, phone, specialty, active, address, city) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, name, phone, specialty, active, address, city]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/api/seamstresses/:id', async (req, res) => {
-    try {
-        const { name, phone, specialty, active, address, city } = req.body;
-        const sql = `UPDATE seamstresses SET name=?, phone=?, specialty=?, active=?, address=?, city=? WHERE id=?`;
-        await pool.query(sql, [name, phone, specialty, active, address, city, req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/seamstresses/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM seamstresses WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// FABRICS
-app.get('/api/fabrics', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
-        res.json(toCamel(rows));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/api/fabrics', async (req, res) => {
-    try {
-        const { id, name, color, colorHex, stockRolls, notes, createdAt, updatedAt } = req.body;
-        const sql = `INSERT INTO fabrics (id, name, color, color_hex, stock_rolls, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, name, color, colorHex, stockRolls, notes, new Date(createdAt), new Date(updatedAt)]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.put('/api/fabrics/:id', async (req, res) => {
-    try {
-        const { name, color, colorHex, stockRolls, notes, updatedAt } = req.body;
-        const sql = `UPDATE fabrics SET name=?, color=?, color_hex=?, stock_rolls=?, notes=?, updated_at=? WHERE id=?`;
-        await pool.query(sql, [name, color, colorHex, stockRolls, notes, new Date(updatedAt), req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.delete('/api/fabrics/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM fabrics WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ORDERS
-app.get('/api/orders', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-        const orders = rows.map(r => {
+        const [rows] = await pool.query(`SELECT * FROM ${table} ORDER BY ${orderField} ASC`);
+        const data = rows.map(r => {
             const camel = toCamel(r);
-            camel.items = typeof r.items === 'string' ? JSON.parse(r.items) : r.items;
-            camel.activeCuttingItems = typeof r.active_cutting_items === 'string' ? JSON.parse(r.active_cutting_items) : r.active_cutting_items;
-            camel.splits = typeof r.splits === 'string' ? JSON.parse(r.splits) : r.splits;
+            // Parse JSON fields if they exist
+            if (r.items) camel.items = typeof r.items === 'string' ? JSON.parse(r.items) : r.items;
+            if (r.default_colors) camel.defaultColors = typeof r.default_colors === 'string' ? JSON.parse(r.default_colors) : r.default_colors;
+            if (r.active_cutting_items) camel.activeCuttingItems = typeof r.active_cutting_items === 'string' ? JSON.parse(r.active_cutting_items) : r.active_cutting_items;
+            if (r.splits) camel.splits = typeof r.splits === 'string' ? JSON.parse(r.splits) : r.splits;
             return camel;
         });
-        res.json(orders);
+        res.json(data);
     } catch (err) {
-        console.error(err);
+        console.error(`Error fetching ${table}:`, err);
         res.status(500).json({ error: err.message });
     }
-});
+};
 
+app.get('/api/products', handleGetAll('products', 'code'));
+app.get('/api/seamstresses', handleGetAll('seamstresses', 'name'));
+app.get('/api/fabrics', handleGetAll('fabrics', 'name'));
+app.get('/api/orders', handleGetAll('orders', 'created_at DESC'));
+
+// CREATE ORDER
 app.post('/api/orders', async (req, res) => {
     try {
         const o = req.body;
-        const sql = `
-            INSERT INTO orders 
-            (id, reference_id, reference_code, description, fabric, grid_type, status, notes, items, active_cutting_items, splits, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const values = [
+        const sql = `INSERT INTO orders (id, reference_id, reference_code, description, fabric, grid_type, status, notes, items, active_cutting_items, splits, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        await pool.query(sql, [
             o.id, o.referenceId, o.referenceCode, o.description, o.fabric, o.gridType, o.status, o.notes,
-            JSON.stringify(o.items || []), 
-            JSON.stringify(o.activeCuttingItems || []), 
-            JSON.stringify(o.splits || []),
+            JSON.stringify(o.items || []), JSON.stringify(o.activeCuttingItems || []), JSON.stringify(o.splits || []),
             new Date(o.createdAt), new Date(o.updatedAt)
-        ];
-        
-        await pool.query(sql, values);
-        res.status(201).json({ message: 'Created' });
+        ]);
+        res.status(201).json({ success: true });
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
+// UPDATE ORDER
 app.put('/api/orders/:id', async (req, res) => {
     try {
         const o = req.body;
-        const sql = `
-            UPDATE orders SET 
-            reference_id=?, reference_code=?, description=?, fabric=?, grid_type=?, status=?, notes=?, 
-            items=?, active_cutting_items=?, splits=?, updated_at=?, finished_at=?
-            WHERE id=?
-        `;
-        const values = [
+        const sql = `UPDATE orders SET reference_id=?, reference_code=?, description=?, fabric=?, grid_type=?, status=?, notes=?, items=?, active_cutting_items=?, splits=?, updated_at=?, finished_at=? WHERE id=?`;
+        await pool.query(sql, [
             o.referenceId, o.referenceCode, o.description, o.fabric, o.gridType, o.status, o.notes,
-            JSON.stringify(o.items || []), 
-            JSON.stringify(o.activeCuttingItems || []), 
-            JSON.stringify(o.splits || []),
-            new Date(o.updatedAt),
-            o.finishedAt ? new Date(o.finishedAt) : null,
-            req.params.id
-        ];
-
-        await pool.query(sql, values);
-        res.json({ message: 'Updated' });
+            JSON.stringify(o.items || []), JSON.stringify(o.activeCuttingItems || []), JSON.stringify(o.splits || []),
+            new Date(), o.finishedAt ? new Date(o.finishedAt) : null, req.params.id
+        ]);
+        res.json({ success: true });
     } catch (err) {
-        console.error(err);
         res.status(500).json({ error: err.message });
     }
 });
 
-app.delete('/api/orders/:id', async (req, res) => {
+// DELETE GENERIC
+app.delete('/api/:table/:id', async (req, res) => {
     try {
-        await pool.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
+        const { table, id } = req.params;
+        // Basic protection for table names
+        const allowedTables = ['orders', 'products', 'seamstresses', 'fabrics'];
+        if (!allowedTables.includes(table)) return res.status(403).json({error: 'Invalid table'});
+        
+        await pool.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
+        res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Fallback for SPA (Single Page Application)
-// This catches any route not handled by API and serves index.html
+// --- FRONTEND SERVING ---
+
+// Serve the 'dist' folder generated by Vite
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// SPA Fallback: Any route that is not API returns index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
+// START SERVER
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`App accessible at http://localhost:${PORT}`);
-    console.log(`Database Host: ${process.env.DB_HOST}`);
+    console.log(`=========================================`);
+    console.log(`🚀 PRODUCTION SERVER RUNNING ON PORT ${PORT}`);
+    console.log(`🖥️  Frontend: http://localhost:${PORT}`);
+    console.log(`🔌 API: http://localhost:${PORT}/api`);
+    console.log(`=========================================`);
 });
