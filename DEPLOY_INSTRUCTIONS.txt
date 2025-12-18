@@ -1,0 +1,21 @@
+
+PARA O SITE RODAR NO SEU SUBDOMÍNIO /CORTE:
+
+1. SSH no VPS e navegue até a pasta:
+   cd /var/www/gestaokavins/corte
+
+2. Instale e faça o Build:
+   npm install
+   npm run build
+
+3. Configure o Nginx:
+   Copie o conteúdo do arquivo NGINX_CONFIG.conf gerado aqui para o seu arquivo de configuração do Nginx no VPS.
+   Geralmente fica em: /etc/nginx/sites-available/gestaokavins.com.br
+
+4. Reinicie o Nginx:
+   sudo systemctl restart nginx
+
+5. Inicie o servidor Node com PM2:
+   pm2 start server.js --name "kavins-corte"
+
+O problema da tela carregando o site principal é porque o Nginx ainda não sabe que o caminho /corte deve ser enviado para a porta 3002.

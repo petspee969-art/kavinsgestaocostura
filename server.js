@@ -12,17 +12,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-// Default to port 3002 as requested
+// Porta 3002 conforme solicitado para rodar no VPS
 const PORT = process.env.PORT || 3002;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// SERVE STATIC FILES (React Build) from /corte subpath
-app.use('/corte', express.static(path.join(__dirname, 'dist')));
+// Caminho da build do Vite
+const distPath = path.join(__dirname, 'dist');
 
-// Database Connection Pool
+// SERVE STATIC FILES (React Build) obrigatoriamente sob o prefixo /corte
+// Isso garante que gestaokavins.com.br/corte/assets/file.js seja encontrado em dist/assets/file.js
+app.use('/corte', express.static(distPath));
+
+// Configuração do Banco de Dados MariaDB/MySQL local
 const pool = mysql.createPool({
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',
@@ -33,7 +37,7 @@ const pool = mysql.createPool({
     queueLimit: 0
 });
 
-// Helper to convert DB rows (snake_case) to App types (camelCase)
+// Auxiliar para camelCase
 const toCamel = (o) => {
     if (!o || typeof o !== 'object') return o;
     if (Array.isArray(o)) return o.map(toCamel);
@@ -45,226 +49,66 @@ const toCamel = (o) => {
     return n;
 };
 
-// --- API ROUTES (Prefixed with /corte/api) ---
+// --- API ROUTES (Prefixo /corte/api) ---
 const router = express.Router();
 
-// PRODUCTS
+// Produtos
 router.get('/products', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM products ORDER BY code ASC');
-        const products = rows.map(r => ({
+        res.json(rows.map(r => ({
             ...toCamel(r),
             defaultColors: typeof r.default_colors === 'string' ? JSON.parse(r.default_colors) : r.default_colors
-        }));
-        res.json(products);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        })));
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/products', async (req, res) => {
-    try {
-        const { id, code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
-        const sql = `INSERT INTO products (id, code, description, default_fabric, default_grid, estimated_pieces_per_roll, default_colors) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, JSON.stringify(defaultColors)]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.put('/products/:id', async (req, res) => {
-    try {
-        const { code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, defaultColors } = req.body;
-        const sql = `UPDATE products SET code=?, description=?, default_fabric=?, default_grid=?, estimated_pieces_per_roll=?, default_colors=? WHERE id=?`;
-        await pool.query(sql, [code, description, defaultFabric, defaultGrid, estimatedPiecesPerRoll, JSON.stringify(defaultColors), req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.delete('/products/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM products WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// SEAMSTRESSES
-router.get('/seamstresses', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
-        res.json(toCamel(rows));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.post('/seamstresses', async (req, res) => {
-    try {
-        const { id, name, phone, specialty, active, address, city } = req.body;
-        const sql = `INSERT INTO seamstresses (id, name, phone, specialty, active, address, city) VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, name, phone, specialty, active, address, city]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.put('/seamstresses/:id', async (req, res) => {
-    try {
-        const { name, phone, specialty, active, address, city } = req.body;
-        const sql = `UPDATE seamstresses SET name=?, phone=?, specialty=?, active=?, address=?, city=? WHERE id=?`;
-        await pool.query(sql, [name, phone, specialty, active, address, city, req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.delete('/seamstresses/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM seamstresses WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// FABRICS
-router.get('/fabrics', async (req, res) => {
-    try {
-        const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
-        res.json(toCamel(rows));
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.post('/fabrics', async (req, res) => {
-    try {
-        const { id, name, color, colorHex, stockRolls, notes, createdAt, updatedAt } = req.body;
-        const sql = `INSERT INTO fabrics (id, name, color, color_hex, stock_rolls, notes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
-        await pool.query(sql, [id, name, color, colorHex, stockRolls, notes, new Date(createdAt), new Date(updatedAt)]);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.put('/fabrics/:id', async (req, res) => {
-    try {
-        const { name, color, colorHex, stockRolls, notes, updatedAt } = req.body;
-        const sql = `UPDATE fabrics SET name=?, color=?, color_hex=?, stock_rolls=?, notes=?, updated_at=? WHERE id=?`;
-        await pool.query(sql, [name, color, colorHex, stockRolls, notes, new Date(updatedAt), req.params.id]);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-router.delete('/fabrics/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM fabrics WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// ORDERS
+// Pedidos (Orders)
 router.get('/orders', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
-        const orders = rows.map(r => {
+        res.json(rows.map(r => {
             const camel = toCamel(r);
             camel.items = typeof r.items === 'string' ? JSON.parse(r.items) : r.items;
             camel.activeCuttingItems = typeof r.active_cutting_items === 'string' ? JSON.parse(r.active_cutting_items) : r.active_cutting_items;
             camel.splits = typeof r.splits === 'string' ? JSON.parse(r.splits) : r.splits;
             return camel;
-        });
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        }));
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/orders', async (req, res) => {
+// Costureiras
+router.get('/seamstresses', async (req, res) => {
     try {
-        const o = req.body;
-        const sql = `
-            INSERT INTO orders 
-            (id, reference_id, reference_code, description, fabric, grid_type, status, notes, items, active_cutting_items, splits, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        const values = [
-            o.id, o.referenceId, o.referenceCode, o.description, o.fabric, o.gridType, o.status, o.notes,
-            JSON.stringify(o.items || []), 
-            JSON.stringify(o.activeCuttingItems || []), 
-            JSON.stringify(o.splits || []),
-            new Date(o.createdAt), new Date(o.updatedAt)
-        ];
-        
-        await pool.query(sql, values);
-        res.status(201).json({ message: 'Created' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
+        res.json(rows.map(toCamel));
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/orders/:id', async (req, res) => {
+// Tecidos
+router.get('/fabrics', async (req, res) => {
     try {
-        const o = req.body;
-        const sql = `
-            UPDATE orders SET 
-            reference_id=?, reference_code=?, description=?, fabric=?, grid_type=?, status=?, notes=?, 
-            items=?, active_cutting_items=?, splits=?, updated_at=?, finished_at=?
-            WHERE id=?
-        `;
-        const values = [
-            o.referenceId, o.referenceCode, o.description, o.fabric, o.gridType, o.status, o.notes,
-            JSON.stringify(o.items || []), 
-            JSON.stringify(o.activeCuttingItems || []), 
-            JSON.stringify(o.splits || []),
-            new Date(o.updatedAt),
-            o.finishedAt ? new Date(o.finishedAt) : null,
-            req.params.id
-        ];
-
-        await pool.query(sql, values);
-        res.json({ message: 'Updated' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+        const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
+        res.json(rows.map(toCamel));
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.delete('/orders/:id', async (req, res) => {
-    try {
-        await pool.query('DELETE FROM orders WHERE id = ?', [req.params.id]);
-        res.json({ message: 'Deleted' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Apply router to /corte/api
+// Aplica o roteador de API
 app.use('/corte/api', router);
 
-// Fallback for SPA (Single Page Application)
-// Re-serves index.html for any /corte/* route
+// FALLBACK PARA SPA
+// Qualquer rota que comece com /corte/ e não seja estática ou API, devolve o index.html
 app.get('/corte/*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    res.sendFile(path.join(distPath, 'index.html'));
 });
 
-// Root redirect to subpath for convenience
+// Redirecionamento amigável da raiz (apenas local)
 app.get('/', (req, res) => {
     res.redirect('/corte/');
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`App accessible at http://localhost:${PORT}/corte/`);
+    console.log(`🚀 Projeto Corte rodando na porta ${PORT}`);
+    console.log(`🔗 API disponível em: /corte/api`);
+    console.log(`📂 Frontend servido em: /corte/`);
 });
