@@ -1,0 +1,100 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #4f46e5;
+  --secondary: #1e1b4b;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  color: #1e293b;
+  overflow-x: hidden;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4f46e5;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInBottom {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideInTop {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 400ms;
+  animation-fill-mode: both;
+}
+
+.fade-in { animation-name: fadeIn; }
+.slide-in-from-bottom-4 { animation-name: slideInBottom; }
+.slide-in-from-top-2 { animation-name: slideInTop; }
+.zoom-in { animation-name: zoomIn; }
+
+/* Utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Components for Textile Production */
+.fabric-card-active {
+  @apply ring-2 ring-indigo-500 border-indigo-200 bg-indigo-50/30;
+}
+
+.status-badge {
+  @apply px-2 py-1 rounded-full text-[10px] font-black uppercase tracking-widest;
+}
+
+/* Responsive Table Fixes */
+@media (max-width: 768px) {
+  .hide-on-mobile {
+    display: none;
+  }
+}
