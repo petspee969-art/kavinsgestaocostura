@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { ProductionOrder, Seamstress } from "../types";
 
@@ -48,9 +47,8 @@ export const generateProductionInsights = async (
       ${dataContext}
     `;
 
-    // Updated to gemini-3-flash-preview for text analysis task
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: prompt,
     });
 
