@@ -1,24 +1,35 @@
-PASSO A PASSO PARA RESOLVER O ERRO DE LOGIN:
 
-1. VERIFIQUE O BANCO DE DADOS (MariaDB/MySQL):
-   Entre no terminal do VPS e verifique se as tabelas existem no banco 'corte'.
-   Se não existirem, execute estes comandos SQL:
+GUIA DE DIAGNÓSTICO DE CONEXÃO (RODE NO TERMINAL DA VPS)
 
-   CREATE TABLE products (id VARCHAR(50) PRIMARY KEY, code VARCHAR(50), description TEXT, default_fabric VARCHAR(100), default_colors JSON, default_grid VARCHAR(20), estimated_pieces_per_roll INT);
-   CREATE TABLE orders (id VARCHAR(50) PRIMARY KEY, reference_id VARCHAR(50), reference_code VARCHAR(50), description TEXT, fabric VARCHAR(100), items JSON, active_cutting_items JSON, splits JSON, grid_type VARCHAR(20), status VARCHAR(50), notes TEXT, created_at DATETIME, updated_at DATETIME, finished_at DATETIME);
-   CREATE TABLE seamstresses (id VARCHAR(50) PRIMARY KEY, name VARCHAR(100), phone VARCHAR(20), specialty VARCHAR(100), active BOOLEAN, address TEXT, city VARCHAR(100));
-   CREATE TABLE fabrics (id VARCHAR(50) PRIMARY KEY, name VARCHAR(100), color VARCHAR(50), color_hex VARCHAR(7), stock_rolls DECIMAL(10,2), notes TEXT, created_at DATETIME, updated_at DATETIME);
+Siga estes passos para descobrir onde o sinal está parando:
 
-2. ATUALIZE O NGINX (CRÍTICO):
-   sudo nano /etc/nginx/sites-available/gestaokavins.com.br
-   (Use a configuração do NGINX_CONFIG.conf sem a barra final no proxy_pass)
-   sudo nginx -t
-   sudo systemctl restart nginx
+1. TESTE SE O PROCESSO NODE ESTÁ RODANDO:
+   $ pm2 list
+   (O status deve estar 'online' para kavins-corte)
 
-3. REINICIE O SERVIDOR NODE:
-   cd /var/www/gestaokavins/corte
-   npm run build
-   pm2 restart kavins-corte
+2. TESTE SE A PORTA 3002 ESTÁ "OUVINDO":
+   $ netstat -tunlp | grep 3002
+   (Deve aparecer uma linha indicando LISTEN)
 
-4. DEBUG:
-   Se o erro persistir, use: `pm2 logs kavins-corte` para ver o erro real do banco de dados.
+3. TESTE A API LOCALMENTE (Ignora o Nginx):
+   $ curl http://127.0.0.1:3002/corte/api/health
+   
+   RESPOSTAS POSSÍVEIS:
+   - Se retornar JSON com "database: connected": O Node e o Banco estão PERFEITOS. O problema é no Nginx.
+   - Se retornar JSON com "database: disconnected": O problema é no arquivo .env (senha ou usuário).
+   - Se retornar "Connection Refused": O servidor Node nem sequer ligou.
+
+4. TESTE A API VIA NGINX (O que o navegador faz):
+   $ curl http://gestaokavins.com.br/corte/api/health
+   
+   - Se aqui der erro e o passo 3 funcionou, seu arquivo de configuração do Nginx está errado.
+   - Certifique-se de que a `location /corte/api` no Nginx aponta para `http://127.0.0.1:3002/corte/api`.
+
+5. COMANDO PARA VER O ERRO REAL NO BANCO:
+   $ pm2 logs kavins-corte --lines 50
+   
+   - Se vir "ER_ACCESS_DENIED_ERROR": A senha no .env está errada.
+   - Se vir "ENOTFOUND": O DB_HOST no .env deve ser 127.0.0.1.
+
+DICA DE OURO: No Linux, às vezes o MySQL não aceita 'localhost'. 
+Sempre use '127.0.0.1' no arquivo .env.
