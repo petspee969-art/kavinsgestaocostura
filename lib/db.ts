@@ -1,9 +1,5 @@
-
 /**
  * API DATABASE ADAPTER
- * 
- * Connects to the local Node.js/Express API (server.js).
- * The API in turn connects to MariaDB/MySQL.
  */
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
@@ -14,34 +10,57 @@ const API_BASE = '/corte/api';
 // Generic Helper for API Calls
 const API = {
     get: async <T>(endpoint: string): Promise<T[]> => {
-        const response = await fetch(`${API_BASE}/${endpoint}`);
-        if (!response.ok) throw new Error(`Failed to fetch ${endpoint}`);
-        return await response.json();
+        try {
+            const response = await fetch(`${API_BASE}/${endpoint}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erro ${response.status} em ${endpoint}: ${errorText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Fetch GET ${endpoint} falhou:`, error);
+            throw error;
+        }
     },
     post: async <T>(endpoint: string, data: T) => {
-        const response = await fetch(`${API_BASE}/${endpoint}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error(`Failed to create ${endpoint}`);
-        return await response.json();
+        try {
+            const response = await fetch(`${API_BASE}/${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`Erro POST ${endpoint}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Fetch POST ${endpoint} falhou:`, error);
+            throw error;
+        }
     },
     put: async <T>(endpoint: string, id: string, data: T) => {
-        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-        if (!response.ok) throw new Error(`Failed to update ${endpoint}`);
-        return await response.json();
+        try {
+            const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (!response.ok) throw new Error(`Erro PUT ${endpoint}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Fetch PUT ${endpoint} falhou:`, error);
+            throw error;
+        }
     },
     delete: async (endpoint: string, id: string) => {
-        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
-            method: 'DELETE'
-        });
-        if (!response.ok) throw new Error(`Failed to delete ${endpoint}`);
-        return await response.json();
+        try {
+            const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
+                method: 'DELETE'
+            });
+            if (!response.ok) throw new Error(`Erro DELETE ${endpoint}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Fetch DELETE ${endpoint} falhou:`, error);
+            throw error;
+        }
     }
 };
 

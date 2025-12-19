@@ -1,20 +1,24 @@
-PASSO A PASSO FINAL (VPS):
+PASSO A PASSO PARA RESOLVER O ERRO DE LOGIN:
 
-1. ATUALIZE O NGINX:
+1. VERIFIQUE O BANCO DE DADOS (MariaDB/MySQL):
+   Entre no terminal do VPS e verifique se as tabelas existem no banco 'corte'.
+   Se não existirem, execute estes comandos SQL:
+
+   CREATE TABLE products (id VARCHAR(50) PRIMARY KEY, code VARCHAR(50), description TEXT, default_fabric VARCHAR(100), default_colors JSON, default_grid VARCHAR(20), estimated_pieces_per_roll INT);
+   CREATE TABLE orders (id VARCHAR(50) PRIMARY KEY, reference_id VARCHAR(50), reference_code VARCHAR(50), description TEXT, fabric VARCHAR(100), items JSON, active_cutting_items JSON, splits JSON, grid_type VARCHAR(20), status VARCHAR(50), notes TEXT, created_at DATETIME, updated_at DATETIME, finished_at DATETIME);
+   CREATE TABLE seamstresses (id VARCHAR(50) PRIMARY KEY, name VARCHAR(100), phone VARCHAR(20), specialty VARCHAR(100), active BOOLEAN, address TEXT, city VARCHAR(100));
+   CREATE TABLE fabrics (id VARCHAR(50) PRIMARY KEY, name VARCHAR(100), color VARCHAR(50), color_hex VARCHAR(7), stock_rolls DECIMAL(10,2), notes TEXT, created_at DATETIME, updated_at DATETIME);
+
+2. ATUALIZE O NGINX (CRÍTICO):
    sudo nano /etc/nginx/sites-available/gestaokavins.com.br
-   (Cole o conteúdo do NGINX_CONFIG.conf atualizado)
-
-2. TESTE E REINICIE O NGINX:
+   (Use a configuração do NGINX_CONFIG.conf sem a barra final no proxy_pass)
    sudo nginx -t
    sudo systemctl restart nginx
 
-3. NO PROJETO CORTE (/var/www/gestaokavins/corte):
+3. REINICIE O SERVIDOR NODE:
+   cd /var/www/gestaokavins/corte
    npm run build
-   pm2 restart kavins-corte || pm2 start server.js --name "kavins-corte"
+   pm2 restart kavins-corte
 
-4. NO PROJETO PRINCIPAL (/var/www/gestaokavins/pedido):
-   pm2 restart kavins-principal
-
-LIMPEZA DE CACHE:
-Se ao acessar gestaokavins.com.br/corte ainda aparecer o projeto principal, 
-aperte CTRL + F5 no navegador para limpar o cache de rota.
+4. DEBUG:
+   Se o erro persistir, use: `pm2 logs kavins-corte` para ver o erro real do banco de dados.
