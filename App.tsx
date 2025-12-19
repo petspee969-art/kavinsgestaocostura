@@ -198,10 +198,14 @@ export default function App() {
   };
 
   const handleDelete = async (table: string, id: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir?")) return;
+    if (!window.confirm("Tem certeza que deseja excluir este item permanentemente?")) return;
     try {
-      const response = await fetch(`/corte/api/${table}/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error("Erro ao excluir do banco");
+      // Usando o adapter centralizado para manter consistência de caminhos
+      if (table === 'orders') await db.orders.delete(id);
+      else if (table === 'products') await db.products.delete(id);
+      else if (table === 'seamstresses') await db.seamstresses.delete(id);
+      else if (table === 'fabrics') await db.fabrics.delete(id);
+      
       alert("Excluído com sucesso!");
       loadAllData();
     } catch (err: any) {

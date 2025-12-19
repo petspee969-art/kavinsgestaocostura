@@ -5,20 +5,24 @@
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
-const API_BASE = '/corte/api';
+// Base alterada para /api conforme configuração do Nginx
+const API_BASE = '/api';
 
 const handleResponse = async (response: Response) => {
     if (!response.ok) {
-        // Tenta ler como JSON, se falhar, lê como texto
         let errorMessage = `Erro ${response.status}`;
+        
+        const text = await response.text();
         try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorMessage;
+            const json = JSON.parse(text);
+            errorMessage = json.error || errorMessage;
         } catch (e) {
-            const textError = await response.text().catch(() => '');
-            if (textError) {
-                console.error("Erro bruto do servidor:", textError);
-                errorMessage = `Erro do Servidor (veja console): ${textError.slice(0, 100)}...`;
+            if (response.status === 405) {
+                errorMessage = "Erro 405: Método não permitido. O servidor bloqueou esta ação.";
+            } else if (response.status === 404) {
+                errorMessage = "Erro 404: API não encontrada.";
+            } else {
+                errorMessage = text.slice(0, 150) || errorMessage;
             }
         }
         throw new Error(errorMessage);
@@ -28,13 +32,22 @@ const handleResponse = async (response: Response) => {
 
 const API = {
     get: async <T>(endpoint: string): Promise<T[]> => {
-        const response = await fetch(`${API_BASE}/${endpoint}`);
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+            headers: { 
+                'Cache-Control': 'no-cache',
+                'Accept': 'application/json'
+            }
+        });
         return handleResponse(response);
     },
     post: async <T>(endpoint: string, data: T) => {
         const response = await fetch(`${API_BASE}/${endpoint}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
             body: JSON.stringify(data)
         });
         return handleResponse(response);
@@ -42,14 +55,21 @@ const API = {
     put: async <T>(endpoint: string, id: string, data: T) => {
         const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
             body: JSON.stringify(data)
         });
         return handleResponse(response);
     },
     delete: async (endpoint: string, id: string) => {
         const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
-            method: 'DELETE'
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json'
+            }
         });
         return handleResponse(response);
     }

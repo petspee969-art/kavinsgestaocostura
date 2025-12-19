@@ -7,11 +7,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
-    base: '/corte/',
+    base: '/',
     server: {
       proxy: {
-        '/corte/api': {
-          target: 'http://localhost:3002',
+        '/api': {
+          target: 'http://localhost:3003',
           changeOrigin: true,
           secure: false,
         }
