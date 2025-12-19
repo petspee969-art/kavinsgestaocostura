@@ -33,12 +33,9 @@ const dbConfig = {
 
 const pool = mysql.createPool(dbConfig);
 
-// --- AUXILIARES DEFENSIVOS ---
+// --- AUXILIARES ---
 
-/**
- * Garante que nenhum valor enviado ao MySQL seja 'undefined', 
- * o que causaria erro no driver mysql2.
- */
+// Impede que 'undefined' quebre a query MySQL
 const cleanParams = (params) => {
     return params.map(p => p === undefined ? null : p);
 };
@@ -144,7 +141,7 @@ const toCamel = (o) => {
 
 const router = express.Router();
 
-// Middleware de log de requisição
+// Middleware de log
 router.use((req, res, next) => {
     if (req.method !== 'GET') {
         console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
@@ -240,6 +237,13 @@ router.put('/orders/:id', async (req, res) => {
 });
 
 // --- COSTUREIRAS ---
+router.get('/seamstresses', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM seamstresses ORDER BY name ASC');
+        res.json(rows.map(toCamel));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/seamstresses', async (req, res) => {
     const d = req.body;
     try {
@@ -252,7 +256,24 @@ router.post('/seamstresses', async (req, res) => {
     }
 });
 
+router.put('/seamstresses/:id', async (req, res) => {
+    const d = req.body;
+    try {
+        const sql = `UPDATE seamstresses SET name=?, phone=?, specialty=?, active=?, address=?, city=? WHERE id=?`;
+        const params = cleanParams([d.name, d.phone, d.specialty, d.active, d.address, d.city, req.params.id]);
+        await pool.query(sql, params);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // --- TECIDOS ---
+router.get('/fabrics', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM fabrics ORDER BY name ASC');
+        res.json(rows.map(toCamel));
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 router.post('/fabrics', async (req, res) => {
     const d = req.body;
     try {
@@ -277,11 +298,11 @@ router.put('/fabrics/:id', async (req, res) => {
     }
 });
 
-// Deleções genéricas
+// --- DELEÇÕES ---
 router.delete('/:table/:id', async (req, res) => {
     const { table, id } = req.params;
     const allowed = ['products', 'orders', 'seamstresses', 'fabrics'];
-    if (!allowed.includes(table)) return res.status(403).json({ error: 'Tabela não permitida' });
+    if (!allowed.includes(table)) return res.status(403).json({ error: 'Proibido' });
     try {
         await pool.query(`DELETE FROM ${table} WHERE id=?`, [id]);
         res.json({ success: true });
