@@ -19,7 +19,6 @@ app.use(express.json());
 
 const distPath = path.resolve(__dirname, 'dist');
 
-// Configuração do Pool de Conexão
 const dbConfig = {
     host: process.env.DB_HOST || '127.0.0.1',
     user: process.env.DB_USER || 'root',
@@ -35,27 +34,26 @@ const pool = mysql.createPool(dbConfig);
 
 // --- AUXILIARES ---
 
-// Impede que 'undefined' quebre a query MySQL
+// Corrige: Apenas undefined vira null. Strings vazias são mantidas.
 const cleanParams = (params) => {
     return params.map(p => p === undefined ? null : p);
 };
 
 const formatDate = (dateStr) => {
-    if (!dateStr) return null;
+    if (!dateStr) return new Date().toISOString().slice(0, 19).replace('T', ' ');
     try {
         const d = new Date(dateStr);
-        if (isNaN(d.getTime())) return null;
+        if (isNaN(d.getTime())) return new Date().toISOString().slice(0, 19).replace('T', ' ');
         return d.toISOString().slice(0, 19).replace('T', ' ');
     } catch (e) { return null; }
 };
 
 const safeJson = (data) => {
+    if (!data) return '[]';
+    if (typeof data === 'string') return data;
     try {
-        if (!data) return '[]';
         return JSON.stringify(data);
-    } catch (e) {
-        return '[]';
-    }
+    } catch (e) { return '[]'; }
 };
 
 async function initDatabase() {
@@ -63,7 +61,7 @@ async function initDatabase() {
         console.log('--- INICIALIZANDO BANCO DE DADOS ---');
         const connection = await pool.getConnection();
         const [dbCheck] = await connection.query('SELECT DATABASE() as db');
-        console.log(`✅ Banco detectado: "${dbCheck[0].db}"`);
+        console.log(`✅ Conectado ao Banco: "${dbCheck[0].db}"`);
         connection.release();
 
         await pool.query(`
@@ -122,9 +120,9 @@ async function initDatabase() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
         `);
 
-        console.log('🚀 Estrutura de tabelas verificada.');
+        console.log('🚀 Tabelas Verificadas.');
     } catch (err) {
-        console.error('❌ ERRO CRÍTICO NA INICIALIZAÇÃO:', err.message);
+        console.error('❌ ERRO NA INICIALIZAÇÃO:', err.message);
     }
 }
 
@@ -141,10 +139,10 @@ const toCamel = (o) => {
 
 const router = express.Router();
 
-// Middleware de log
+// Middleware de Debug para POST/PUT
 router.use((req, res, next) => {
-    if (req.method !== 'GET') {
-        console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    if (req.method === 'POST' || req.method === 'PUT') {
+        console.log(`[DEBUG API] ${req.method} ${req.url} | Body:`, JSON.stringify(req.body));
     }
     next();
 });
@@ -165,11 +163,12 @@ router.post('/products', async (req, res) => {
     try {
         const sql = `INSERT INTO products (id, code, description, default_fabric, default_colors, default_grid, estimated_pieces_per_roll) VALUES (?, ?, ?, ?, ?, ?, ?)`;
         const params = cleanParams([d.id, d.code, d.description, d.defaultFabric, safeJson(d.defaultColors), d.defaultGrid, d.estimatedPiecesPerRoll]);
-        await pool.query(sql, params);
-        res.status(201).json({ success: true });
+        const [result] = await pool.query(sql, params);
+        console.log(`✅ Produto Criado: ${d.code}`);
+        res.status(201).json({ success: true, id: d.id });
     } catch (err) {
-        console.error('❌ ERRO SQL (PRODUTO):', err.message);
-        res.status(500).json({ error: `Erro no Banco: ${err.message}` });
+        console.error('❌ ERRO SQL PRODUTO:', err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -180,10 +179,7 @@ router.put('/products/:id', async (req, res) => {
         const params = cleanParams([d.code, d.description, d.defaultFabric, safeJson(d.defaultColors), d.defaultGrid, d.estimatedPiecesPerRoll, req.params.id]);
         await pool.query(sql, params);
         res.json({ success: true });
-    } catch (err) {
-        console.error('❌ ERRO SQL (UPDATE PRODUTO):', err.message);
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- ORDENS ---
@@ -213,8 +209,8 @@ router.post('/orders', async (req, res) => {
         await pool.query(sql, params);
         res.status(201).json({ success: true });
     } catch (err) {
-        console.error('❌ ERRO SQL (ORDEM):', err.message);
-        res.status(500).json({ error: `Erro ao salvar ordem: ${err.message}` });
+        console.error('❌ ERRO SQL ORDEM:', err.message);
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -230,10 +226,7 @@ router.put('/orders/:id', async (req, res) => {
         ]);
         await pool.query(sql, params);
         res.json({ success: true });
-    } catch (err) {
-        console.error('❌ ERRO SQL (UPDATE ORDEM):', err.message);
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- COSTUREIRAS ---
@@ -251,9 +244,7 @@ router.post('/seamstresses', async (req, res) => {
         const params = cleanParams([d.id, d.name, d.phone, d.specialty, d.active, d.address, d.city]);
         await pool.query(sql, params);
         res.status(201).json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.put('/seamstresses/:id', async (req, res) => {
@@ -281,9 +272,7 @@ router.post('/fabrics', async (req, res) => {
         const params = cleanParams([d.id, d.name, d.color, d.colorHex, d.stockRolls, d.notes, formatDate(d.createdAt), formatDate(d.updatedAt)]);
         await pool.query(sql, params);
         res.status(201).json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.put('/fabrics/:id', async (req, res) => {
@@ -293,9 +282,7 @@ router.put('/fabrics/:id', async (req, res) => {
         const params = cleanParams([d.name, d.color, d.colorHex, d.stockRolls, d.notes, formatDate(d.updatedAt), req.params.id]);
         await pool.query(sql, params);
         res.json({ success: true });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // --- DELEÇÕES ---
@@ -316,6 +303,6 @@ app.get('/', (req, res) => res.redirect('/corte/'));
 
 initDatabase().then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`🚀 SERVIDOR RODANDO NA PORTA ${PORT}`);
+        console.log(`🚀 SERVIDOR OK NA PORTA ${PORT}`);
     });
 });

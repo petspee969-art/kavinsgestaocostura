@@ -114,12 +114,13 @@ export default function App() {
       if (existing) {
         const updated = { ...orderData, updatedAt: timestamp } as ProductionOrder;
         await db.orders.update(updated);
-        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+        alert("Ordem atualizada com sucesso!");
       } else {
         const newItem = { ...orderData, updatedAt: timestamp } as ProductionOrder;
         await db.orders.create(newItem);
-        setOrders(prev => [newItem, ...prev]);
+        alert("Ordem criada com sucesso!");
       }
+      loadAllData();
     } catch (err: any) {
       alert(`Erro ao salvar pedido: ${err.message}`);
     }
@@ -136,7 +137,8 @@ export default function App() {
         updatedAt: new Date().toISOString()
       };
       await db.orders.update(updatedOrder);
-      setOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+      alert("Corte confirmado com sucesso!");
+      loadAllData();
       setActiveModal(null);
     } catch (err: any) {
       alert(`Erro ao confirmar corte: ${err.message}`);
@@ -188,7 +190,8 @@ export default function App() {
       };
 
       await db.orders.update(updatedOrder);
-      setOrders(prev => prev.map(o => o.id === order.id ? updatedOrder : o));
+      alert(`Pacote enviado para ${seamstress.name}!`);
+      loadAllData();
     } catch (err: any) {
       alert("Erro ao distribuir: " + err.message);
     }
@@ -198,14 +201,11 @@ export default function App() {
     if (!window.confirm("Tem certeza que deseja excluir?")) return;
     try {
       const response = await fetch(`/corte/api/${table}/${id}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error("Erro ao excluir");
-      
-      if (table === 'orders') setOrders(prev => prev.filter(o => o.id !== id));
-      if (table === 'products') setProducts(prev => prev.filter(p => p.id !== id));
-      if (table === 'fabrics') setFabrics(prev => prev.filter(f => f.id !== id));
-      if (table === 'seamstresses') setSeamstresses(prev => prev.filter(s => s.id !== id));
+      if (!response.ok) throw new Error("Erro ao excluir do banco");
+      alert("Excluído com sucesso!");
+      loadAllData();
     } catch (err: any) {
-      alert(err.message);
+      alert("Falha na exclusão: " + err.message);
     }
   };
 
@@ -296,8 +296,8 @@ export default function App() {
         onClose={() => setActiveModal(null)} 
         productToEdit={selectedItem} 
         onSave={(p) => {
-           if ('id' in p) db.products.update(p as ProductReference).then(loadAllData);
-           else db.products.create({ ...p, id: crypto.randomUUID() } as ProductReference).then(loadAllData);
+           const promise = ('id' in p) ? db.products.update(p as ProductReference) : db.products.create({ ...p, id: crypto.randomUUID() } as ProductReference);
+           promise.then(() => { alert("Produto salvo!"); loadAllData(); }).catch(err => alert("Erro ao salvar produto: " + err.message));
         }}
         fabrics={fabrics}
       />
@@ -306,8 +306,8 @@ export default function App() {
         onClose={() => setActiveModal(null)}
         seamstressToEdit={selectedItem}
         onSave={(s) => {
-          if ('id' in s) db.seamstresses.update(s as Seamstress).then(loadAllData);
-          else db.seamstresses.create({ ...s, id: crypto.randomUUID() } as Seamstress).then(loadAllData);
+           const promise = ('id' in s) ? db.seamstresses.update(s as Seamstress) : db.seamstresses.create({ ...s, id: crypto.randomUUID() } as Seamstress);
+           promise.then(() => { alert("Costureira salva!"); loadAllData(); }).catch(err => alert("Erro ao salvar costureira: " + err.message));
         }}
       />
       <FabricModal
@@ -315,8 +315,8 @@ export default function App() {
         onClose={() => setActiveModal(null)}
         fabricToEdit={selectedItem}
         onSave={(f) => {
-          if ('id' in f) db.fabrics.update(f as Fabric).then(loadAllData);
-          else db.fabrics.create({ ...f, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Fabric).then(loadAllData);
+           const promise = ('id' in f) ? db.fabrics.update(f as Fabric) : db.fabrics.create({ ...f, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Fabric);
+           promise.then(() => { alert("Tecido salvo!"); loadAllData(); }).catch(err => alert("Erro ao salvar tecido: " + err.message));
         }}
       />
       <CutConfirmationModal
@@ -421,19 +421,19 @@ function OrdersList({ orders, onEdit, onConfirmCut, onDistribute, onDelete }: an
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2">
                     {order.status === OrderStatus.PLANNED && (
-                      <button onClick={() => onConfirmCut(order)} className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
+                      <button onClick={() => onConfirmCut(order)} title="Confirmar Corte Realizado" className="p-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all">
                         <Scissors size={18} />
                       </button>
                     )}
                     {order.status === OrderStatus.CUTTING && order.activeCuttingItems.length > 0 && (
-                      <button onClick={() => onDistribute(order)} className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-600 hover:text-white transition-all">
+                      <button onClick={() => onDistribute(order)} title="Enviar para Costureira" className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-600 hover:text-white transition-all">
                         <Users size={18} />
                       </button>
                     )}
-                    <button onClick={() => onEdit(order)} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
+                    <button onClick={() => onEdit(order)} title="Editar Ordem" className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all">
                       <Edit2 size={18} />
                     </button>
-                    <button onClick={() => onDelete(order.id)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
+                    <button onClick={() => onDelete(order.id)} title="Excluir" className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100">
                       <Trash2 size={18} />
                     </button>
                   </div>

@@ -5,73 +5,55 @@
 
 import { Fabric, ProductionOrder, ProductReference, Seamstress } from "../types";
 
-// Base URL for the API (must match server config)
 const API_BASE = '/corte/api';
 
-// Generic Helper for API Calls
-const API = {
-    get: async <T>(endpoint: string): Promise<T[]> => {
+const handleResponse = async (response: Response) => {
+    if (!response.ok) {
+        // Tenta ler como JSON, se falhar, lê como texto
+        let errorMessage = `Erro ${response.status}`;
         try {
-            const response = await fetch(`${API_BASE}/${endpoint}`);
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-                throw new Error(errorData.error || `Erro ${response.status} em ${endpoint}`);
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+            const textError = await response.text().catch(() => '');
+            if (textError) {
+                console.error("Erro bruto do servidor:", textError);
+                errorMessage = `Erro do Servidor (veja console): ${textError.slice(0, 100)}...`;
             }
-            return await response.json();
-        } catch (error) {
-            console.error(`Fetch GET ${endpoint} falhou:`, error);
-            throw error;
         }
-    },
-    post: async <T>(endpoint: string, data: T) => {
-        try {
-            const response = await fetch(`${API_BASE}/${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Erro ao processar requisição' }));
-                throw new Error(errorData.error || `Erro no Servidor: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error(`Fetch POST ${endpoint} falhou:`, error);
-            throw error;
-        }
-    },
-    put: async <T>(endpoint: string, id: string, data: T) => {
-        try {
-            const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({ error: 'Erro ao atualizar' }));
-                throw new Error(errorData.error || `Erro no Servidor: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error(`Fetch PUT ${endpoint} falhou:`, error);
-            throw error;
-        }
-    },
-    delete: async (endpoint: string, id: string) => {
-        try {
-            const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
-                method: 'DELETE'
-            });
-            if (!response.ok) throw new Error(`Erro ao excluir em ${endpoint}`);
-            return await response.json();
-        } catch (error) {
-            console.error(`Fetch DELETE ${endpoint} falhou:`, error);
-            throw error;
-        }
+        throw new Error(errorMessage);
     }
+    return response.json();
 };
 
-// --- EXPORTED DB API ---
+const API = {
+    get: async <T>(endpoint: string): Promise<T[]> => {
+        const response = await fetch(`${API_BASE}/${endpoint}`);
+        return handleResponse(response);
+    },
+    post: async <T>(endpoint: string, data: T) => {
+        const response = await fetch(`${API_BASE}/${endpoint}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    put: async <T>(endpoint: string, id: string, data: T) => {
+        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        return handleResponse(response);
+    },
+    delete: async (endpoint: string, id: string) => {
+        const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
+            method: 'DELETE'
+        });
+        return handleResponse(response);
+    }
+};
 
 export const db = {
     orders: {
