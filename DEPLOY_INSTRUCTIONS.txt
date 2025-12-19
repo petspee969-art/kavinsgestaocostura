@@ -1,35 +1,65 @@
 
-GUIA DE DIAGNÓSTICO DE CONEXÃO (RODE NO TERMINAL DA VPS)
+CÓDIGOS SQL PARA MANUTENÇÃO (COPIE E COLE NO MYSQL):
 
-Siga estes passos para descobrir onde o sinal está parando:
+1. Acesse o MySQL:
+mysql -u root -p
 
-1. TESTE SE O PROCESSO NODE ESTÁ RODANDO:
-   $ pm2 list
-   (O status deve estar 'online' para kavins-corte)
+2. Selecione o banco:
+USE corte;
 
-2. TESTE SE A PORTA 3002 ESTÁ "OUVINDO":
-   $ netstat -tunlp | grep 3002
-   (Deve aparecer uma linha indicando LISTEN)
+3. EXECUTE ESTE COMANDO para garantir que o MySQL aceite datas vazias ou formatos ISO se necessário:
+SET GLOBAL sql_mode = 'NO_ENGINE_SUBSTITUTION';
+SET SESSION sql_mode = 'NO_ENGINE_SUBSTITUTION';
 
-3. TESTE A API LOCALMENTE (Ignora o Nginx):
-   $ curl http://127.0.0.1:3002/corte/api/health
-   
-   RESPOSTAS POSSÍVEIS:
-   - Se retornar JSON com "database: connected": O Node e o Banco estão PERFEITOS. O problema é no Nginx.
-   - Se retornar JSON com "database: disconnected": O problema é no arquivo .env (senha ou usuário).
-   - Se retornar "Connection Refused": O servidor Node nem sequer ligou.
+4. Tabelas (Caso precise recriar alguma):
 
-4. TESTE A API VIA NGINX (O que o navegador faz):
-   $ curl http://gestaokavins.com.br/corte/api/health
-   
-   - Se aqui der erro e o passo 3 funcionou, seu arquivo de configuração do Nginx está errado.
-   - Certifique-se de que a `location /corte/api` no Nginx aponta para `http://127.0.0.1:3002/corte/api`.
+CREATE TABLE products (
+    id VARCHAR(50) PRIMARY KEY,
+    code VARCHAR(50) NOT NULL,
+    description TEXT,
+    default_fabric VARCHAR(100),
+    default_colors JSON,
+    default_grid VARCHAR(20),
+    estimated_pieces_per_roll INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-5. COMANDO PARA VER O ERRO REAL NO BANCO:
-   $ pm2 logs kavins-corte --lines 50
-   
-   - Se vir "ER_ACCESS_DENIED_ERROR": A senha no .env está errada.
-   - Se vir "ENOTFOUND": O DB_HOST no .env deve ser 127.0.0.1.
+CREATE TABLE orders (
+    id VARCHAR(50) PRIMARY KEY,
+    reference_id VARCHAR(50),
+    reference_code VARCHAR(50),
+    description TEXT,
+    fabric VARCHAR(100),
+    items JSON,
+    active_cutting_items JSON,
+    splits JSON,
+    grid_type VARCHAR(20),
+    status VARCHAR(50),
+    notes TEXT,
+    created_at DATETIME,
+    updated_at DATETIME,
+    finished_at DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-DICA DE OURO: No Linux, às vezes o MySQL não aceita 'localhost'. 
-Sempre use '127.0.0.1' no arquivo .env.
+CREATE TABLE seamstresses (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    phone VARCHAR(20),
+    specialty VARCHAR(100),
+    active BOOLEAN DEFAULT TRUE,
+    address TEXT,
+    city VARCHAR(100)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE fabrics (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    color VARCHAR(50),
+    color_hex VARCHAR(7),
+    stock_rolls DECIMAL(10,2) DEFAULT 0.00,
+    notes TEXT,
+    created_at DATETIME,
+    updated_at DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+5. PARA VER OS ERROS NO SERVIDOR:
+pm2 logs kavins-corte --lines 50

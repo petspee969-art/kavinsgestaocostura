@@ -1,3 +1,4 @@
+
 /**
  * API DATABASE ADAPTER
  */
@@ -13,8 +14,8 @@ const API = {
         try {
             const response = await fetch(`${API_BASE}/${endpoint}`);
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Erro ${response.status} em ${endpoint}: ${errorText}`);
+                const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+                throw new Error(errorData.error || `Erro ${response.status} em ${endpoint}`);
             }
             return await response.json();
         } catch (error) {
@@ -29,7 +30,10 @@ const API = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            if (!response.ok) throw new Error(`Erro POST ${endpoint}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Erro ao processar requisição' }));
+                throw new Error(errorData.error || `Erro no Servidor: ${response.status}`);
+            }
             return await response.json();
         } catch (error) {
             console.error(`Fetch POST ${endpoint} falhou:`, error);
@@ -43,7 +47,10 @@ const API = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            if (!response.ok) throw new Error(`Erro PUT ${endpoint}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Erro ao atualizar' }));
+                throw new Error(errorData.error || `Erro no Servidor: ${response.status}`);
+            }
             return await response.json();
         } catch (error) {
             console.error(`Fetch PUT ${endpoint} falhou:`, error);
@@ -55,7 +62,7 @@ const API = {
             const response = await fetch(`${API_BASE}/${endpoint}/${id}`, {
                 method: 'DELETE'
             });
-            if (!response.ok) throw new Error(`Erro DELETE ${endpoint}`);
+            if (!response.ok) throw new Error(`Erro ao excluir em ${endpoint}`);
             return await response.json();
         } catch (error) {
             console.error(`Fetch DELETE ${endpoint} falhou:`, error);
